@@ -68,12 +68,12 @@ def uqs(arg: str) -> str:
     Unquotes a string by removing surrounding double quotes and unescaping
     escaped quotes and backslashes.
 
-    If the input string starts and ends with a double quote (``"``), this
+    If the input string starts and ends with a double quote ``"``, this
     function:
 
     - Removes the surrounding quotes.
-    - Replaces escaped quotes (``\\\"``) with actual quotes (``"``).
-    - Replaces escaped backslashes (``\\\\``) with single backslashes (``\\``).
+    - Replaces escaped quotes ``\\\"`` with actual quotes ``"``.
+    - Replaces escaped backslashes ``\\\\`` with single backslashes ``\\``.
 
     If the input string does not have surrounding quotes or is shorter than
     2 characters, it is returned unchanged.
@@ -97,8 +97,8 @@ def qus(arg: str) -> str:
     any existing double quotes and backslashes.
 
     Specifically:
-      - Escapes backslashes (`\`) as `\\\\`
-      - Escapes double quotes (`"`) as (`\"`)
+      - Escapes backslashes `\\` as `\\\\`
+      - Escapes double quotes `"` as `\"`
       - Wraps the entire result in double quotes
 
     :param arg: The input string to quote.
@@ -263,8 +263,10 @@ class FgtConfigObject(FgtConfigBody):
         * `conf_obj.c_set('param')` → Returns a `FgtConfigSet`
     """
 
-    def c_table(self, key: str,
-                default: Optional['FgtConfigTable'] = None) -> 'FgtConfigTable':
+    def c_table(self,
+                key: str,
+                default: Optional['FgtConfigTable'] = None
+                ) -> 'FgtConfigTable':
         """
         Retrieve a configuration table by key, optionally returning a default.
 
@@ -286,8 +288,10 @@ class FgtConfigObject(FgtConfigBody):
             raise TypeError(f"'{key}' is not of type FgtConfigTable")
         return value
 
-    def c_object(self, key: str,
-                 default: Optional['FgtConfigObject'] = None) -> Self:
+    def c_object(self,
+                 key: str,
+                 default: Optional['FgtConfigObject'] = None
+                 ) -> Self:
         """
         Retrieve a configuration object by key, optionally returning a default.
 
@@ -309,8 +313,10 @@ class FgtConfigObject(FgtConfigBody):
             raise TypeError(f"'{key}' is not of type FgtConfigObject")
         return value
 
-    def c_set(self, key: str,
-              default: Optional['FgtConfigSet'] = None) -> 'FgtConfigSet':
+    def c_set(self,
+              key: str,
+              default: Optional['FgtConfigSet'] = None
+              ) -> 'FgtConfigSet':
         """
         Retrieve a configuration set by key, optionally returning a default.
 
@@ -332,7 +338,10 @@ class FgtConfigObject(FgtConfigBody):
             raise TypeError(f"'{key}' is not of type FgtConfigSet")
         return value
 
-    def opt(self, key: str, default: Optional[str] = None) -> str:
+    def opt(self,
+            key: str,
+            default: Optional[str] = None
+            ) -> str:
         """
         Return the value of a simple SET command.
 
@@ -360,7 +369,11 @@ class FgtConfigObject(FgtConfigBody):
 
         return config_set[0]
 
-    def same(self, key: str, value: str, default: Optional[str] = None) -> bool:
+    def same(self,
+             key: str,
+             value: str,
+             default: Optional[str] = None
+             ) -> bool:
         """
         Compare the parameter value with the given value.
 
@@ -401,7 +414,9 @@ class FgtConfigObject(FgtConfigBody):
 class FgtConfigTable(FgtConfigBody):
     """ Represents a CONFIG command containing multiple EDIT commands """
 
-    def c_entry(self, key: Union[str, int]) -> FgtConfigObject:
+    def c_entry(self,
+                key: Union[str, int]
+                ) -> FgtConfigObject:
         """
         Retrieve a configuration object by the given key.
 
