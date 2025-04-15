@@ -11,12 +11,12 @@ __version__ = '1.0'
 import io
 from pathlib import Path
 
-from .config import FgtConfig, FgtConfigRoot, FgtConfigComments
-from .config import FgtConfigNode, FgtConfigObject, FgtConfigTable, FgtConfigSet, FgtConfigUnset
-from .config import qus, uqs
-from .config import FgtConfigItem, FgtConfigStack, FgtConfigTraverseCallback
-from .parser import FgtConfigRootFactory, FgtConfigParser
-from .parser import FgtConfigSyntaxError, FgtConfigEosError
+from ._config import FgtConfig, FgtConfigRoot, FgtConfigComments
+from ._config import FgtConfigNode, FgtConfigObject, FgtConfigTable, FgtConfigSet, FgtConfigUnset
+from ._config import qus, uqs
+from ._config import FgtConfigItem, FgtConfigStack, FgtConfigTraverseCallback
+from ._parser import FgtConfigRootFactory, FgtConfigParser
+from ._parser import FgtConfigSyntaxError, FgtConfigEosError
 
 
 def set_root_config_factory(factory: FgtConfigRootFactory) -> None:

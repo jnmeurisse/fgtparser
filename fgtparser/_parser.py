@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from typing import Optional, Final, Union, cast, Callable, final, TextIO
 
-from .config import (
+from ._config import (
     FgtConfig, FgtConfigToken, FgtConfigTokens, FgtConfigSet, FgtConfigObject,
     FgtConfigUnset, FgtConfigTable, FgtConfigRoot, FgtConfigComments,
     FgtConfigNode
