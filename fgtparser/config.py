@@ -48,18 +48,18 @@ The function is called with 4 arguments :
     * a flag indicating if we enter or leave a node,
     * the current node,
     * the stack of parent nodes,
-    * optional user data.
+    * user data.
 """
 
-FgtConfigFilterCallback = Callable[[FgtConfigItem, FgtConfigStack, Any], bool]
+FgtConfigFilterCallback = Callable[
+    [FgtConfigItem, FgtConfigStack, Any], bool]
 """ Callback function called from `FgtConfig.make_config` method.  
 This callback offers the caller to filter some config from the configuration
 tree. The function is called with 3 arguments :
     * the current node,
     * the stack of parent nodes,
     * user data.
-The filter function must return a boolean.  The config_text function does not
-output the current node if the filter returns True.
+The filter function must return a boolean.
 """
 
 
@@ -319,7 +319,7 @@ class FgtConfigObject(FgtConfigBody):
             raise TypeError(f"'{key}' is not of type FgtConfigSet")
         return value
 
-    def opt(
+    def param(
         self,
         key: str,
         default: Optional[str] = None
@@ -341,9 +341,9 @@ class FgtConfigObject(FgtConfigBody):
         """
         try:
             config_set = self.c_set(key)
-            if len(config_set) > 1:
+            if len(config_set) != 1:
                 raise ValueError(
-                    "opt method is available only on simple set command")
+                    "param method is available only on set command with one argument")
         except KeyError as e:
             if default is None:
                 raise e
@@ -361,7 +361,7 @@ class FgtConfigObject(FgtConfigBody):
         Compare the parameter value with the given value.
 
         This method retrieves the value associated with the given key using the
-        ``opt`` method and compares it with the provided ``value``.
+        ``param`` method and compares it with the provided ``value``.
 
         :param key: The name of the parameter.
         :param value: The value to compare the parameter value with.
@@ -370,9 +370,9 @@ class FgtConfigObject(FgtConfigBody):
         :return: ``True`` if the parameter value matches the provided
             ``value``, otherwise ``False``.
         """
-        return self.opt(key, default) == value
+        return self.param(key, default) == value
 
-    def __getattr__(self, key: str) -> FgtConfigNode:
+    def __getattr__(self, key: str) -> FgtConfigNode | str:
         """
         Return the parameter value using object.param syntax.
 
@@ -389,9 +389,10 @@ class FgtConfigObject(FgtConfigBody):
             return super().__getattribute__(key)
 
         attribute = self.get(key)
-        if attribute is None:
-            raise AttributeError(key)
-        return attribute
+        if isinstance(attribute, FgtConfigSet) and len(attribute) == 1:
+            return attribute[0]
+        else:
+            return attribute
 
 
 class FgtConfigTable(FgtConfigBody):
@@ -769,7 +770,7 @@ class FgtConfig(object):
             output.append('end')
             output.append('')
             output.append('config global')
-            self.root.traverse('', append_entry, deque(), output)
+            self.root.traverse('', append_entry, FgtConfigStack(), output)
             output.append('end')
             output.append('')
             for k, v in self.vdoms.items():
@@ -779,7 +780,7 @@ class FgtConfig(object):
                 output.append('end')
                 output.append('')
         else:
-            self.root.traverse('', append_entry, deque(), output)
+            self.root.traverse('', append_entry, FgtConfigStack(), output)
         return output
 
     def __repr__(self) -> str:

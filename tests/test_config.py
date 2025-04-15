@@ -54,12 +54,13 @@ class TestConfig(unittest.TestCase):
         config = parse_file(make_test_path("test3.conf"))
         config_root = cast(RootConfig, config.root)
         config_global = config_root.system_global()
-        self.assertEqual("12", config_global.opt("timezone"))
+        self.assertEqual("12", config_global.param("timezone"))
+        self.assertEqual("12", config_global.timezone)
 
         config_address = config_root.firewall_address6()
         self.assertEqual(
             "::/128",
-            config_address.c_entry('none').opt('ip6')
+            config_address.c_entry('none').param('ip6')
             )
 
     def test_section(self) -> None:
