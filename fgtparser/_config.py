@@ -717,7 +717,7 @@ class FgtConfig(object):
 
         :param item_filter: An optional filtering callback. This function is
             called for each node in the configuration tree. If the callback
-            returns `True`, the node is skipped. Defaults to `None`.
+            returns `True`, the node is included. Defaults to `None`.
         :param data: Optional data that can be passed to the `item_filter`
             callback function. Defaults to `None`.
 
@@ -725,10 +725,10 @@ class FgtConfig(object):
         """
 
         def append_entry(
-                begin_of_section: bool,
-                item: FgtConfigItem,
-                parents: FgtConfigStack,
-                output_list: list[str]
+            begin_of_section: bool,
+            item: FgtConfigItem,
+            parents: FgtConfigStack,
+            output_list: list[str]
         ) -> None:
             # check if we skip this item
             if item_filter and not item_filter(item, parents, data):
@@ -798,7 +798,7 @@ class FgtConfig(object):
         :param file: the output file.
         :param include_comments: output configuration comments when true.
         :param item_filter: an optional filtering callback. This function is
-            called for each node in the configuration tree.  The node is skipped
+            called for each node in the configuration tree.  The node is included
             if the callback returns true.
         :param data: optional data passed to the item_filter callback.
         """
