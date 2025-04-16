@@ -431,11 +431,11 @@ class FgtConfigParser(object):
         # parse the configuration stream
         lexer = cls.Lexer(input_stream)
 
-        # .. parse all comments and empty lines
+        # ... parse all comments and empty lines
         while (token := lexer.next_snl_token(raise_eos=False)).startswith('#'):
             comments.append(token)
 
-        # .. parse all config statements
+        # ... parse all config statements
         while not lexer.is_eos(token):
             if token == 'config':
                 k, v = cls._parse_config(lexer)
