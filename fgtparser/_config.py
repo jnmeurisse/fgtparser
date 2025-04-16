@@ -684,7 +684,7 @@ class FgtConfig(object):
         return self._comments
 
     @property
-    def has_vdom(self) -> bool:
+    def multi_vdom(self) -> bool:
         """ Return true if the firewall is configured with VDOMs"""
         return len(self._vdoms) > 0
 
@@ -761,7 +761,7 @@ class FgtConfig(object):
             output_list.append(spaces + line)
 
         output: list[str] = []
-        if self.has_vdom:
+        if self.multi_vdom:
             output.append('')
             output.append('config vdom')
             for k in self.vdoms.keys():

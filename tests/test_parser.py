@@ -179,7 +179,7 @@ class TestParser(unittest.TestCase):
                 end
             """
         config = parse_string(config_text)
-        self.assertTrue(config.has_vdom)
+        self.assertTrue(config.multi_vdom)
         self.assertIsInstance(config.root, FgtConfigRoot)
         self.assertIsInstance(config.vdoms['root'], FgtConfigRoot)
 
