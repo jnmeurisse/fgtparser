@@ -40,12 +40,13 @@ def parse_string(config_value: str) -> FgtConfig:
         return FgtConfigParser.parse(config_stream)
 
 
-def parse_file(filename: Path | str) -> FgtConfig:
+def parse_file(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
     """ Parse a FortiGate configuration file.
 
     :param filename: the configuration filename.
+    :param encoding: default encoding.
     :return: a ``FgtConfig`` object.
     :raise FgtConfigSyntaxError: if a syntax error is detected.
     """
-    with io.open(str(filename), "r", encoding='ascii') as config_stream:
+    with io.open(str(filename), "r", encoding=encoding) as config_stream:
         return FgtConfigParser.parse(config_stream)
