@@ -30,6 +30,9 @@ class _StreamPosition:
     def __repr__(self):
         return f"({self.row}, {self.col})"
 
+    def format(self) -> str:
+        return f"line {self.row}, column {self.col}"
+
 
 class FgtConfigSyntaxError(Exception):
     """ raised when a syntax error is detected """
@@ -193,13 +196,17 @@ class FgtConfigParser(object):
                     while True:
                         c = self._next()
                         if self.is_eos(c):
-                            raise FgtConfigSyntaxError("unbalanced quote")
+                            raise FgtConfigSyntaxError(
+                                f"unbalanced quote at line {self.get_pos().row}"
+                            )
 
                         if c == '\\':
                             token += c
                             c = self._next()
                             if self.is_eos(c):
-                                raise FgtConfigSyntaxError("escape error")
+                                raise FgtConfigSyntaxError(
+                                    f"escape error at line {self.get_pos().row}"
+                                )
                             token += c
 
                         elif c == self.QUOTE:
@@ -231,7 +238,7 @@ class FgtConfigParser(object):
             while not self._is_eol(token := self.next_token()):
                 if self.is_comment(token):
                     raise FgtConfigSyntaxError(
-                        f"unexpected comment found at {self.get_pos()}"
+                        f"unexpected comment found at {self.get_pos().format()}"
                     )
                 tokens.append(token)
 
@@ -271,7 +278,9 @@ class FgtConfigParser(object):
         """
         tokens: FgtConfigTokens = lexer.next_parameters()
         if len(tokens) < 2:
-            raise FgtConfigSyntaxError(f"invalid set command at {lexer.get_pos()}")
+            raise FgtConfigSyntaxError(
+                f"invalid set command at line {lexer.get_pos().row-1}, missing command argument"
+            )
 
         return tokens[0], FgtConfigSet(tokens[1:])
 
@@ -287,7 +296,9 @@ class FgtConfigParser(object):
         """
         tokens: FgtConfigTokens = lexer.next_parameters()
         if len(tokens) != 1:
-            raise FgtConfigSyntaxError(f"invalid unset command at {lexer.get_pos()}")
+            raise FgtConfigSyntaxError(
+                f"invalid unset command at line {lexer.get_pos().row-1}"
+            )
 
         return tokens[0], FgtConfigUnset()
 
@@ -312,7 +323,7 @@ class FgtConfigParser(object):
             return cls._parse_config(lexer)
 
         raise FgtConfigSyntaxError(
-            f"invalid entry '{entry[:10]}' at position {lexer.get_pos()}"
+            f"invalid entry '{entry[:10]}' near {lexer.get_pos().format()}"
         )
 
     @classmethod
@@ -329,7 +340,7 @@ class FgtConfigParser(object):
         edit_key: FgtConfigTokens = lexer.next_parameters()
         if len(edit_key) != 1:
             raise FgtConfigSyntaxError(
-                f"invalid table configuration at position {lexer.get_pos()}"
+                f"invalid table configuration near {lexer.get_pos().format()}"
             )
 
         # parse until next keyword or end keyword.  The end keyword is accepted only in a vdom
@@ -370,7 +381,7 @@ class FgtConfigParser(object):
         config_keys: FgtConfigTokens = lexer.next_parameters()
         if len(config_keys) == 0:
             raise FgtConfigSyntaxError(
-                f"invalid config at position {lexer.get_pos()}"
+                f"invalid config near {lexer.get_pos().format()}"
             )
 
         # parse until end keyword
@@ -455,7 +466,7 @@ class FgtConfigParser(object):
 
             else:
                 raise FgtConfigSyntaxError(
-                    f"invalid entry '{token[:10]}' at position {lexer.get_pos()}"
+                    f"invalid entry '{token[:10]}' near {lexer.get_pos().format()}"
                 )
 
             token = lexer.next_snl_token(raise_eos=False)
