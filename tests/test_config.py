@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import cast
 
 from fgtparser import FgtConfigRoot, FgtConfigTable, FgtConfigObject, FgtConfigNode, FgtConfigSet
-from fgtparser import parse_file, parse_string, set_root_config_factory
+from fgtparser import parse_file, parse_string, set_root_config_factory, uqs
 from tests import make_test_path
 
 
@@ -15,9 +15,9 @@ class TestConfig(unittest.TestCase):
         return all(line1.strip() == line2.strip() for line1, line2 in zip(cfg1, cfg2))
 
     @staticmethod
-    def _parse_and_compare(filename: Path) -> bool:
+    def _parse_and_compare(filename: Path, encoding: str = 'ascii') -> bool:
         # Load and parse the configuration file
-        config = parse_file(filename)
+        config = parse_file(filename, encoding)
 
         # Write the configuration to a memory file
         output_buffer = io.StringIO()
@@ -27,7 +27,7 @@ class TestConfig(unittest.TestCase):
         text_config_1 = output_buffer.getvalue().split("\n")
 
         # Do the same with the file
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding=encoding) as f:
             text_config_2 = f.read().split("\n")
 
         # and compare for equality
@@ -41,6 +41,9 @@ class TestConfig(unittest.TestCase):
 
     def test_config3(self) -> None:
         self.assertTrue(TestConfig._parse_and_compare(make_test_path("test3.conf")))
+
+    def test_config4(self) -> None:
+        self.assertTrue(TestConfig._parse_and_compare(make_test_path("test4.conf"), 'latin-1'))
 
     def test_factory(self) -> None:
         class RootConfig(FgtConfigRoot):
@@ -174,3 +177,8 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(config_test.get("2"), FgtConfigObject)
         self.assertIsInstance(config_test.get("5"), FgtConfigObject)
         self.assertIsInstance(config_test.c_entry(1), FgtConfigObject)
+
+    def test_encoding(self):
+        config = parse_file(make_test_path("test4.conf"), encoding='latin-1')
+        config_root = config.root
+        self.assertEqual(uqs(config_root.c_table("user local").c_entry('André').comment), 'Utilisateur avancé')
