@@ -261,8 +261,9 @@ class FgtConfigObject(FgtConfigBody):
             ``FgtConfigTable``.
         """
         value = self.get(key, default)
-        if not isinstance(value, FgtConfigTable):
+        if value is not None and not isinstance(value, FgtConfigTable):
             raise TypeError(f"'{key}' is not of type 'FgtConfigTable'")
+
         return value
 
     def c_object(
@@ -286,8 +287,9 @@ class FgtConfigObject(FgtConfigBody):
             ``FgtConfigObject``.
         """
         value = self.get(key, default)
-        if not isinstance(value, FgtConfigObject):
+        if value is not None and not isinstance(value, FgtConfigObject):
             raise TypeError(f"'{key}' is not of type 'FgtConfigObject'")
+
         return value
 
     def c_set(
@@ -311,8 +313,9 @@ class FgtConfigObject(FgtConfigBody):
             ``FgtConfigSet``.
         """
         value = self.get(key, default)
-        if not isinstance(value, FgtConfigSet):
+        if value is not None and not isinstance(value, FgtConfigSet):
             raise TypeError(f"'{key}' is not of type 'FgtConfigSet'")
+
         return value
 
     def param(
@@ -401,8 +404,7 @@ class FgtConfigTable(FgtConfigBody):
             value = super().get(qus(item))
         else:
             raise TypeError("Invalid key type")
-
-        if not isinstance(value, FgtConfigObject):
+        if value and not isinstance(value, FgtConfigObject):
             raise TypeError(f"'{item}' is not of type 'FgtConfigObject'")
         return value
 
