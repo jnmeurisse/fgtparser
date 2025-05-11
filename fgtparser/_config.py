@@ -26,7 +26,7 @@
 import re
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Any, Optional, Callable, TextIO, Iterator, final, Self, cast
+from typing import Any, Optional, Callable, TextIO, Iterator, final, Self, cast, Final
 
 FgtConfigToken = str
 """ A token in a config file. A token is a sequence of characters. """
@@ -404,8 +404,10 @@ class FgtConfigTable(FgtConfigBody):
             value = super().get(qus(item))
         else:
             raise TypeError("Invalid key type")
+
         if value and not isinstance(value, FgtConfigObject):
             raise TypeError(f"'{item}' is not of type 'FgtConfigObject'")
+
         return value
 
     def c_entry(
@@ -420,57 +422,20 @@ class FgtConfigTable(FgtConfigBody):
 
 
 @final
-class FgtConfigSet(FgtConfigNode):
+class FgtConfigSet(FgtConfigNode, FgtConfigTokens):
     """ Represents a SET command. """
-
     def __init__(self, parameters: FgtConfigTokens) -> None:
-        """
-        Initialize a SET command with the provided list of parameters.
-        """
-        self._parameters = parameters
+        super().__init__(parameters)
 
-    def __getitem__(self, index: int) -> FgtConfigToken:
-        """
-        Retrieve a parameter by its index from the SET command.
-        """
-        return self._parameters[index]
-
-    def __setitem__(self, index: int, value: FgtConfigToken) -> None:
-        """
-        Set a specific parameter at a given index in the SET command.
-        """
-        if not isinstance(value, FgtConfigToken):
-            raise TypeError('Invalid type')
-        self._parameters[index] = value
-
-    def __repr__(self) -> str:
-        """
-        Return a string representation of the SET command and its parameters.
-        """
-        return repr(self._parameters)
-
-    def __len__(self) -> int:
-        """
-        Get the number of parameters in the SET command.
-        """
-        return len(self._parameters)
-
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, FgtConfigSet):
-            return other._parameters == self._parameters
+            return super().__eq__(other)
         elif isinstance(other, list):
-            return FgtConfigSet(other) == self
+            return self == FgtConfigSet(other)
         elif isinstance(other, str):
-            return FgtConfigSet([other]) == self
+            return self == FgtConfigSet([other])
         else:
             raise TypeError()
-
-    @property
-    def params(self) -> FgtConfigTokens:
-        """
-        Get the list of parameters for the SET command.
-        """
-        return self._parameters
 
     def traverse(
             self,
@@ -548,11 +513,13 @@ class FgtConfigRoot(FgtConfigObject):
 
 @final
 class FgtConfigComments(FgtConfigTokens):
+    _config_version_comment: Final[str] = '#config-version='
+
     def _config_version(self) -> list[str]:
         version = ["?-?"]
         for comment in self:
-            if comment.startswith("#config-version="):
-                version = comment[16:].split(':')
+            if comment.startswith(self._config_version_comment):
+                version = comment[len(self._config_version_comment):].split(':')
         return version
 
     @property
@@ -668,7 +635,7 @@ class FgtConfig(object):
             value = item[1]
 
             if isinstance(value, FgtConfigSet):
-                line = f"set {key} {' '.join(value.params)}"
+                line = f"set {key} {' '.join(value)}"
             elif isinstance(value, FgtConfigUnset):
                 line = f"unset {key}"
             elif isinstance(value, (FgtConfigTable, FgtConfigObject)):

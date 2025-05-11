@@ -58,7 +58,7 @@ class TestParser(unittest.TestCase):
 
         entry_1 = conf_table.c_entry(1)
         self.assertIsInstance(entry_1, FgtConfigObject)
-        self.assertListEqual(entry_1.c_set('parameter1').params, ['value1'])
+        self.assertListEqual(entry_1.c_set('parameter1'), ['value1'])
         self.assertEqual(conf_table.c_entry(1).param('parameter1'), 'value1')
 
         entry_2 = conf_table.c_entry(2)
@@ -101,7 +101,7 @@ class TestParser(unittest.TestCase):
 
         self.assertEqual(len(opt1), 3)
         self.assertIsInstance(opt1.get('parameter1'), FgtConfigSet)
-        self.assertListEqual(opt1.c_set('parameter1').params, ['value1', '"value2"', 'value3'])
+        self.assertListEqual(opt1.c_set('parameter1'), ['value1', '"value2"', 'value3'])
         self.assertEqual(opt1.c_table('subconfig1').c_entry(1).param('parameter2'), 'value2')
         self.assertEqual(opt1.c_table('subconfig2').c_entry('ABC').param('parameter3'), 'value3')
 

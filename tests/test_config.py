@@ -103,7 +103,7 @@ class TestConfig(unittest.TestCase):
 
         config_address = config_root.c_table("firewall address")
         dmz_address_1 = config_address.c_entry('DMZ')
-        self.assertEqual(dmz_address_1.c_set('subnet').params, ['172.16.1.0', '255.255.255.0'])
+        self.assertEqual(dmz_address_1.c_set('subnet'), ['172.16.1.0', '255.255.255.0'])
         dmz_address_2 = config_address['DMZ']
         self.assertEqual(dmz_address_2['subnet'], FgtConfigSet(['172.16.1.0', '255.255.255.0']))
 
