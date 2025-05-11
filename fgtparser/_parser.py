@@ -11,7 +11,7 @@ from typing import Optional, Final, Union, cast, Callable, final, TextIO
 from ._config import (
     FgtConfig, FgtConfigToken, FgtConfigTokens, FgtConfigSet, FgtConfigObject,
     FgtConfigUnset, FgtConfigTable, FgtConfigRoot, FgtConfigComments,
-    FgtConfigNode
+    FgtConfigNode, uqs
 )
 
 _Char = str
