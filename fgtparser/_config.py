@@ -38,12 +38,12 @@ FgtConfigItem = tuple[str, 'FgtConfigNode']
 """ Represents the parameter name and the associated configuration node. """
 
 FgtConfigStack = deque[FgtConfigItem]
-""" A stack of configuration items.  
+""" A stack of configuration items.
 This stack is generated during the traversal of the configuration tree. """
 
 FgtConfigTraverseCallback = Callable[
     [bool, FgtConfigItem, FgtConfigStack, Any], None]
-""" Callback function called during the traversal of the configuration tree. 
+""" Callback function called during the traversal of the configuration tree.
 The function is called with 4 arguments :
     * a flag indicating if we enter or leave a node,
     * the current node,
@@ -53,7 +53,7 @@ The function is called with 4 arguments :
 
 FgtConfigFilterCallback = Callable[
     [FgtConfigItem, FgtConfigStack, Any], bool]
-""" Callback function called from `FgtConfig.make_config` method.  
+""" Callback function called from `FgtConfig.make_config` method.
 This callback offers the caller to filter some config from the configuration
 tree. The function is called with 3 arguments :
     * the current node,
