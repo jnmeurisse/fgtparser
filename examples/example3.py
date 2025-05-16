@@ -1,6 +1,5 @@
 # convert a fortigate configuration file to json format.
-import sys
-from fgtparser import uqs, parse_file, FgtConfig, FgtConfigTable, FgtConfigSet, FgtConfigUnset
+from fgtparser import uqs, parse_file, FgtConfig, FgtConfigTable, FgtConfigUnset
 from json import dumps
 
 
