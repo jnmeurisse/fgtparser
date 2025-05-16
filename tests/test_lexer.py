@@ -82,4 +82,3 @@ class TestLexer(unittest.TestCase):
         self.assertEqual(lexer.next_snl_token(), "set")
         self.assertEqual(lexer.next_snl_token(), "a")
         self.assertEqual(lexer.next_snl_token(), '"é ù"')
-
