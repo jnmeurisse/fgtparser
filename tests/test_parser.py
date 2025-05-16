@@ -266,17 +266,15 @@ class TestParser(unittest.TestCase):
                 end
             """
 
-        nodes = []
-
-        def cb(enter, node, stack,  data):
-            nonlocal nodes
+        def cb(enter, node, stack,  nodes):
             if enter:
                 nodes.append(node[0])
 
         config = parse_string(config_text)
         root = config.root
-        root.traverse("root", cb, deque(), None)
-        self.assertListEqual(nodes, [
+        all_nodes = []
+        root.traverse("root", cb, deque(), all_nodes)
+        self.assertListEqual(all_nodes, [
             "level1",
             "level1.1",
             "level1.2",
