@@ -113,10 +113,10 @@ class TestParser(unittest.TestCase):
         config_text = \
             """
                 # comment 1 "test"
-                
+
                 # comment 2
                 # comment 3
-                
+
                 config test
                     edit "opt1"
                     next
@@ -135,8 +135,7 @@ class TestParser(unittest.TestCase):
         config_text = \
             """
                 #config-version=FGT60E-5.04-FW-build1111-161216:opmode=0:vdom=0:user=admin
-                
-                
+
                 config test
                 end
             """
@@ -201,7 +200,7 @@ class TestParser(unittest.TestCase):
                     config level2.2.2
                     end
                     config level2.2.3
-                    end                
+                    end
                 end
                 config level1.3
                     config level2.3.1
@@ -246,16 +245,16 @@ class TestParser(unittest.TestCase):
                     config level1.3
                     end
                 end
-                
+
                 config level2
                     config level2.1
                     end
                     config level2.2
                     end
                     config level2.3
-                    end                
+                    end
                 end
-                
+
                 config level3
                     config level3.1
                         config level3.1.1
