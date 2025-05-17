@@ -85,7 +85,7 @@ Method:
   - `c_entry(key)`: Return a config entry by name or index (→ `FgtConfigObject`)
 
 #### FgtConfigSet: a `set` command
-method
+method:
 - List-like access to parameters
 
 #### FgtConfigUnset: an `unset` command
@@ -128,7 +128,7 @@ method
 
 ___
 # Installation
-Download wheel file from github and install it using pip (note: this package requires Python version >= 3.11.) 
+Download wheel file from github and install it using pip (note: this package requires Python version >= 3.11) 
 
 ```
 pip3 install fgtparser-1.0-py3-none-any.whl
