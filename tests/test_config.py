@@ -182,3 +182,13 @@ class TestConfig(unittest.TestCase):
         config = parse_file(make_test_path("test4.conf"), encoding='latin-1')
         config_root = config.root
         self.assertEqual(uqs(config_root.c_table("user local").c_entry('André').comment), 'Utilisateur avancé')
+
+    def test_default(self):
+        config_string = """
+            config test
+            end
+        """
+        config = parse_string(config_string)
+        config_test = config.root.c_object("test")
+        self.assertEqual(config_test.param('item1'), None)
+        self.assertEqual(config_test.param('item1', 'default'), 'default')
