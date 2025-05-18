@@ -339,7 +339,7 @@ class FgtConfigObject(FgtConfigBody):
         :raises ValueError: If the SET command defines multiple values for the
             parameter.
         """
-        value = self.c_set(key, FgtConfigSet([default]) if default else None)
+        value = self.c_set(key, FgtConfigSet([default]) if default is not None else None)
 
         if value:
             if len(value) != 1:
