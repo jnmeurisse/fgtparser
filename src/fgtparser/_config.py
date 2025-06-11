@@ -509,9 +509,8 @@ class FgtConfigRoot(FgtConfigObject):
         else:
             compiled_pattern = re.compile(pattern)
             for k, v in self.items():
-                if isinstance(v, (FgtConfigTable, FgtConfigObject)):
-                    if compiled_pattern.match(k):
-                        yield k, v
+                if isinstance(v, (FgtConfigTable, FgtConfigObject)) and compiled_pattern.match(k):
+                    yield k, v
 
     def traverse(
             self,
