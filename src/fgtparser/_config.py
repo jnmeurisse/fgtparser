@@ -244,8 +244,8 @@ class FgtConfigObject(FgtConfigBody):
         attribute = self.get(key)
         if isinstance(attribute, FgtConfigSet) and len(attribute) == 1:
             return attribute[0]
-        else:
-            return attribute
+
+        return attribute
 
     def c_table(
             self,
@@ -439,13 +439,14 @@ class FgtConfigSet(FgtConfigNode, list[str]):
 
     def __eq__(self, other) -> bool:
         if isinstance(other, FgtConfigSet):
-            return super().__eq__(other)
+            result = super().__eq__(other)
         elif isinstance(other, list):
-            return self == FgtConfigSet(other)
+            result = self == FgtConfigSet(other)
         elif isinstance(other, str):
-            return self == FgtConfigSet([other])
+            result = self == FgtConfigSet([other])
         else:
             raise TypeError
+        return result
 
     def traverse(
             self,
