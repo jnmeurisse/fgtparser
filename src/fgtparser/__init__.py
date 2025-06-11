@@ -12,22 +12,22 @@ import io
 from pathlib import Path
 
 from ._config import FgtConfig as FgtConfig
-from ._config import FgtConfigRoot as FgtConfigRoot
 from ._config import FgtConfigComments as FgtConfigComments
 from ._config import FgtConfigItem as FgtConfigItem
 from ._config import FgtConfigNode as FgtConfigNode
 from ._config import FgtConfigObject as FgtConfigObject
-from ._config import FgtConfigTable as FgtConfigTable
+from ._config import FgtConfigRoot as FgtConfigRoot
 from ._config import FgtConfigSet as FgtConfigSet
-from ._config import FgtConfigUnset as FgtConfigUnset
 from ._config import FgtConfigStack as FgtConfigStack
+from ._config import FgtConfigTable as FgtConfigTable
 from ._config import FgtConfigTraverseCallback as FgtConfigTraverseCallback
+from ._config import FgtConfigUnset as FgtConfigUnset
 from ._config import qus as qus
 from ._config import uqs as uqs
-from ._parser import FgtConfigRootFactory as FgtConfigRootFactory
-from ._parser import FgtConfigParser as FgtConfigParser
-from ._parser import FgtConfigSyntaxError as FgtConfigSyntaxError
 from ._parser import FgtConfigEosError as FgtConfigEosError
+from ._parser import FgtConfigParser as FgtConfigParser
+from ._parser import FgtConfigRootFactory as FgtConfigRootFactory
+from ._parser import FgtConfigSyntaxError as FgtConfigSyntaxError
 
 
 def set_root_config_factory(factory: FgtConfigRootFactory) -> None:
@@ -59,5 +59,5 @@ def parse_file(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
     :return: a ``FgtConfig`` object.
     :raise FgtConfigSyntaxError: if a syntax error is detected.
     """
-    with io.open(str(filename), "r", encoding=encoding) as config_stream:
+    with open(str(filename), encoding=encoding) as config_stream:
         return FgtConfigParser.parse(config_stream)

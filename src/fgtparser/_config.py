@@ -26,7 +26,8 @@
 import re
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Any, Optional, Callable, TextIO, Iterator, final, Self, cast, Final
+from collections.abc import Callable, Iterator
+from typing import Any, Final, Optional, Self, TextIO, cast, final
 
 FgtConfigToken = str
 """ A token in a config file. A token is a sequence of characters. """
@@ -68,9 +69,7 @@ def uqs(arg: str) -> str:
     Unquotes a string by removing surrounding double quotes and unescaping
     escaped quotes and backslashes.
     """
-    if len(arg) < 2:
-        res = arg
-    elif arg[0] != '"' or arg[-1] != '"':
+    if len(arg) < 2 or (arg[0] != '"' or arg[-1] != '"'):
         res = arg
     else:
         res = arg.replace('\\"', '"').replace('\\\\', '\\')[1:-1]
@@ -183,7 +182,7 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
             elif isinstance(node, (FgtConfigSet, FgtConfigUnset)):
                 yield path, node
             else:
-                raise TypeError()
+                raise TypeError
 
 
 class FgtConfigObject(FgtConfigBody):
@@ -321,7 +320,7 @@ class FgtConfigObject(FgtConfigBody):
     def param(
             self,
             key: str,
-            default: Optional[str] = None
+            default: str | None = None
     ) -> str:
         """
         Return the value of a simple SET command.
@@ -413,7 +412,7 @@ class FgtConfigTable(FgtConfigBody):
     def c_entry(
             self,
             key: str | int,
-            default: Optional[FgtConfigObject] = None
+            default: FgtConfigObject | None = None
     ) -> FgtConfigObject:
         try:
             return cast(FgtConfigObject, self[key])
@@ -422,9 +421,9 @@ class FgtConfigTable(FgtConfigBody):
 
 
 @final
-class FgtConfigSet(FgtConfigNode, FgtConfigTokens):
+class FgtConfigSet(FgtConfigNode, list[str]):
     """ Represents a SET command. """
-    def __init__(self, parameters: FgtConfigTokens) -> None:
+    def __init__(self, parameters: str | list[str]) -> None:
         super().__init__(parameters)
 
     def __eq__(self, other) -> bool:
@@ -435,7 +434,7 @@ class FgtConfigSet(FgtConfigNode, FgtConfigTokens):
         elif isinstance(other, str):
             return self == FgtConfigSet([other])
         else:
-            raise TypeError()
+            raise TypeError
 
     def traverse(
             self,
@@ -474,7 +473,7 @@ class FgtConfigRoot(FgtConfigObject):
 
     def sections(
             self,
-            pattern: Optional[str] = None
+            pattern: str | None = None
     ) -> Iterator[tuple[str, FgtConfigTable | FgtConfigObject]]:
         """
         Returns all sections in the root configuration, optionally filtered by a
@@ -536,7 +535,7 @@ class FgtConfigComments(FgtConfigTokens):
 
 
 @final
-class FgtConfig(object):
+class FgtConfig:
     """ A FortiGate configuration. """
 
     def __init__(
@@ -567,7 +566,7 @@ class FgtConfig(object):
         if not all(isinstance(v, (FgtConfigObject, FgtConfigTable)) for v in
                    root.values()
                    ):
-            raise ValueError()
+            raise ValueError
 
         self._comments: FgtConfigComments = comments
         self._root: FgtConfigRoot = root
@@ -601,8 +600,8 @@ class FgtConfig(object):
 
     def make_config(
             self,
-            item_filter: Optional[FgtConfigFilterCallback] = None,
-            data: Optional[Any] = None
+            item_filter: FgtConfigFilterCallback | None = None,
+            data: Any | None = None
     ) -> list[str]:
         """
         Generate the configuration as a list of strings.
@@ -648,9 +647,9 @@ class FgtConfig(object):
                                                     ):
                     line = f"edit {key}" if begin_of_section else "next"
                 else:
-                    raise ValueError()
+                    raise ValueError
             else:
-                raise ValueError()
+                raise ValueError
 
             # create indentation spaces to prefix the line
             spaces: str = ' ' * (len(parents) * self._indent)
@@ -688,8 +687,8 @@ class FgtConfig(object):
             self,
             file: TextIO,
             include_comments: bool,
-            item_filter: Optional[FgtConfigFilterCallback] = None,
-            data: Optional[Any] = None
+            item_filter: FgtConfigFilterCallback | None = None,
+            data: Any | None = None
     ) -> None:
         """ Write the configuration to a file.
 

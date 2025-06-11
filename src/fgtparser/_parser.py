@@ -5,13 +5,21 @@
 # SPDX-License-Identifier: GPL-3.0-only
 #
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Optional, Final, Union, cast, Callable, final, TextIO
+from typing import Final, TextIO, cast, final
 
 from ._config import (
-    FgtConfig, FgtConfigToken, FgtConfigTokens, FgtConfigSet, FgtConfigObject,
-    FgtConfigUnset, FgtConfigTable, FgtConfigRoot, FgtConfigComments,
-    FgtConfigNode
+    FgtConfig,
+    FgtConfigComments,
+    FgtConfigNode,
+    FgtConfigObject,
+    FgtConfigRoot,
+    FgtConfigSet,
+    FgtConfigTable,
+    FgtConfigToken,
+    FgtConfigTokens,
+    FgtConfigUnset,
 )
 
 _Char = str
@@ -45,7 +53,7 @@ class FgtConfigEosError(FgtConfigSyntaxError):
         super().__init__("unexpected end of stream")
 
 
-class FgtConfigParser(object):
+class FgtConfigParser:
     """ This class implements a parser of a FortiGate configuration file.
 
     The accepted syntax of this parser is:
@@ -90,9 +98,9 @@ class FgtConfigParser(object):
         def __init__(self, input_stream: TextIO) -> None:
             """ Initialize the lexer """
             self._stream = input_stream
-            self._char: Optional[_Char] = None
+            self._char: _Char | None = None
             self._pos: _StreamPosition = _StreamPosition(1, 1)
-            self._token: Optional[FgtConfigToken] = None
+            self._token: FgtConfigToken | None = None
 
         def _update_position(self, c: _Char) -> None:
             """ Keep track of the (line, column) position in the input stream """
@@ -260,7 +268,7 @@ class FgtConfigParser(object):
                 token = self.next_token()
 
             if raise_eos and self.is_eos(token):
-                raise FgtConfigEosError()
+                raise FgtConfigEosError
 
             return token
 
@@ -371,7 +379,7 @@ class FgtConfigParser(object):
     def _parse_config(
         cls,
         lexer: Lexer
-    ) -> tuple[str, Union[FgtConfigTable, FgtConfigObject]]:
+    ) -> tuple[str, FgtConfigTable | FgtConfigObject]:
         """ Parse all configuration commands after CONFIG up to END delimiter.
 
         :return: the parameter name and a `FgtConfigTable` or `FgtConfigObject`.
@@ -386,7 +394,7 @@ class FgtConfigParser(object):
 
         # parse until end keyword
         token = lexer.next_snl_token()
-        config: Union[FgtConfigTable, FgtConfigObject]
+        config: FgtConfigTable | FgtConfigObject
         if token == 'edit':
             # it is a table object.
             # Example:
