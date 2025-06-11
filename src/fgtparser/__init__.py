@@ -22,6 +22,7 @@ from ._config import FgtConfigStack as FgtConfigStack
 from ._config import FgtConfigTable as FgtConfigTable
 from ._config import FgtConfigTraverseCallback as FgtConfigTraverseCallback
 from ._config import FgtConfigUnset as FgtConfigUnset
+from ._config import FgtNodeTransition as FgtNodeTransition
 from ._config import qus as qus
 from ._config import uqs as uqs
 from ._parser import FgtConfigEosError as FgtConfigEosError

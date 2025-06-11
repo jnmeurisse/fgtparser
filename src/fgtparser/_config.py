@@ -27,6 +27,7 @@ import re
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterator
+from enum import Enum, auto
 from typing import Any, Final, Optional, Self, TextIO, cast, final
 
 FgtConfigToken = str
@@ -42,8 +43,15 @@ FgtConfigStack = deque[FgtConfigItem]
 """ A stack of configuration items.
 This stack is generated during the traversal of the configuration tree. """
 
+
+class FgtNodeTransition(Enum):
+    """ a flag indicating if we enter or leave a node when traversing the configuration tree. """
+    ENTER_NODE = auto()
+    EXIT_NODE = auto()
+
+
 FgtConfigTraverseCallback = Callable[
-    [bool, FgtConfigItem, FgtConfigStack, Any], None]
+    [FgtNodeTransition, FgtConfigItem, FgtConfigStack, Any], None]
 """ Callback function called during the traversal of the configuration tree.
 The function is called with 4 arguments :
     * a flag indicating if we enter or leave a node,
@@ -143,7 +151,7 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
             data: Any
     ) -> None:
         # … enter the config section
-        fn(True, (key, self), parents, data)
+        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
         parents.append((key, self))
 
         # ... traverse all items in this dictionary
@@ -152,7 +160,7 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
 
         # … leave the config section
         parents.pop()
-        fn(False, (key, self), parents, data)
+        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
 
     def walk(self, key: str, delimiter: str = "/") -> Iterator[FgtConfigItem]:
         """
@@ -446,7 +454,8 @@ class FgtConfigSet(FgtConfigNode, list[str]):
             parents: FgtConfigStack,
             data: Any
     ) -> None:
-        fn(True, (key, self), parents, data)
+        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
+        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
 
 
 @final
@@ -460,7 +469,8 @@ class FgtConfigUnset(FgtConfigNode):
             parents: FgtConfigStack,
             data: Any
     ) -> None:
-        fn(True, (key, self), parents, data)
+        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
+        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
 
     def __len__(self) -> int:
         return 0
@@ -623,7 +633,7 @@ class FgtConfig:
         """
 
         def append_entry(
-                begin_of_section: bool,
+                transition: FgtNodeTransition,
                 item: FgtConfigItem,
                 parents: FgtConfigStack,
                 output_list: list[str]
@@ -636,19 +646,19 @@ class FgtConfig:
             key = item[0]
             value = item[1]
 
-            if isinstance(value, FgtConfigSet):
+            if isinstance(value, FgtConfigSet) and transition == FgtNodeTransition.ENTER_NODE:
                 line = f"set {key} {' '.join(value)}"
-            elif isinstance(value, FgtConfigUnset):
+            elif isinstance(value, FgtConfigUnset) and transition == FgtNodeTransition.ENTER_NODE:
                 line = f"unset {key}"
             elif isinstance(value, (FgtConfigTable, FgtConfigObject)):
                 if len(parents) == 0 or isinstance(parents[-1][1],
                                                    FgtConfigObject
                                                    ):
-                    line = f"config {key}" if begin_of_section else "end"
+                    line = f"config {key}" if transition == FgtNodeTransition.ENTER_NODE else "end"
                 elif len(parents) > 0 or isinstance(parents[-1][1],
                                                     FgtConfigTable
                                                     ):
-                    line = f"edit {key}" if begin_of_section else "next"
+                    line = f"edit {key}" if transition == FgtNodeTransition.ENTER_NODE else "next"
                 else:
                     raise ValueError
             else:
