@@ -112,7 +112,7 @@ class FgtConfigParser:
         @classmethod
         def _is_eol(cls, token: FgtConfigToken) -> bool:
             """ Return true if `token` is an end of line.  """
-            return token in (cls.EOL, cls.EOS)
+            return token in {cls.EOL, cls.EOS}
 
         @classmethod
         def is_eos(cls, token: FgtConfigToken) -> bool:
@@ -284,7 +284,7 @@ class FgtConfigParser:
         """
         tokens: FgtConfigTokens = lexer.next_parameters()
         if len(tokens) < 2:
-            msg =  f"invalid set command at line {lexer.get_pos().row-1}, missing command argument"
+            msg = f"invalid set command at line {lexer.get_pos().row - 1}, missing command argument"
             raise FgtConfigSyntaxError(msg)
 
         return tokens[0], FgtConfigSet(tokens[1:])
