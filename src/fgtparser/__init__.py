@@ -52,8 +52,8 @@ def parse_string(config_value: str) -> FgtConfig:
         return FgtConfigParser.parse(config_stream)
 
 
-def parse_file(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
-    """ Parse a FortiGate configuration file.
+def load_file(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
+    """ Load a FortiGate configuration file.
 
     :param filename: the configuration filename.
     :param encoding: default encoding.
