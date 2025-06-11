@@ -261,7 +261,8 @@ class FgtConfigObject(FgtConfigBody):
         """
         value = self.get(key, default)
         if value is not None and not isinstance(value, FgtConfigTable):
-            raise TypeError(f"'{key}' is not of type 'FgtConfigTable'")
+            msg = f"'{key}' is not of type 'FgtConfigTable'"
+            raise TypeError(msg)
 
         return value
 
@@ -287,7 +288,8 @@ class FgtConfigObject(FgtConfigBody):
         """
         value = self.get(key, default)
         if value is not None and not isinstance(value, FgtConfigObject):
-            raise TypeError(f"'{key}' is not of type 'FgtConfigObject'")
+            msg = f"'{key}' is not of type 'FgtConfigObject'"
+            raise TypeError(msg)
 
         return value
 
@@ -313,7 +315,8 @@ class FgtConfigObject(FgtConfigBody):
         """
         value = self.get(key, default)
         if value is not None and not isinstance(value, FgtConfigSet):
-            raise TypeError(f"'{key}' is not of type 'FgtConfigSet'")
+            msg = f"'{key}' is not of type 'FgtConfigSet'"
+            raise TypeError(msg)
 
         return value
 
@@ -342,9 +345,8 @@ class FgtConfigObject(FgtConfigBody):
 
         if value:
             if len(value) != 1:
-                raise ValueError(
-                    "param method is available only on SET command with one argument"
-                )
+                msg = "param method is available only on SET command with one argument"
+                raise ValueError(msg)
             value = value[0]
 
         return value
@@ -405,7 +407,8 @@ class FgtConfigTable(FgtConfigBody):
             raise TypeError("Invalid key type")
 
         if value and not isinstance(value, FgtConfigObject):
-            raise TypeError(f"'{item}' is not of type 'FgtConfigObject'")
+            msg = f"'{item}' is not of type 'FgtConfigObject'"
+            raise TypeError(msg)
 
         return value
 

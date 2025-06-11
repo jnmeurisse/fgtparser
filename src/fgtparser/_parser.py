@@ -204,17 +204,15 @@ class FgtConfigParser:
                     while True:
                         c = self._next()
                         if self.is_eos(c):
-                            raise FgtConfigSyntaxError(
-                                f"unbalanced quote at line {self.get_pos().row}"
-                            )
+                            msg = f"unbalanced quote at line {self.get_pos().row}"
+                            raise FgtConfigSyntaxError(msg)
 
                         if c == '\\':
                             token += c
                             c = self._next()
                             if self.is_eos(c):
-                                raise FgtConfigSyntaxError(
-                                    f"escape error at line {self.get_pos().row}"
-                                )
+                                msg = f"escape error at line {self.get_pos().row}"
+                                raise FgtConfigSyntaxError(msg)
                             token += c
 
                         elif c == self.QUOTE:
@@ -245,9 +243,9 @@ class FgtConfigParser:
             tokens: FgtConfigTokens = FgtConfigTokens()
             while not self._is_eol(token := self.next_token()):
                 if self.is_comment(token):
-                    raise FgtConfigSyntaxError(
-                        f"unexpected comment found at {self.get_pos().format()}"
-                    )
+                    msg = f"unexpected comment found at {self.get_pos().format()}"
+                    raise FgtConfigSyntaxError(msg)
+
                 tokens.append(token)
 
             return tokens
@@ -286,9 +284,8 @@ class FgtConfigParser:
         """
         tokens: FgtConfigTokens = lexer.next_parameters()
         if len(tokens) < 2:
-            raise FgtConfigSyntaxError(
-                f"invalid set command at line {lexer.get_pos().row-1}, missing command argument"
-            )
+            msg =  f"invalid set command at line {lexer.get_pos().row-1}, missing command argument"
+            raise FgtConfigSyntaxError(msg)
 
         return tokens[0], FgtConfigSet(tokens[1:])
 
@@ -304,9 +301,8 @@ class FgtConfigParser:
         """
         tokens: FgtConfigTokens = lexer.next_parameters()
         if len(tokens) != 1:
-            raise FgtConfigSyntaxError(
-                f"invalid unset command at line {lexer.get_pos().row-1}"
-            )
+            msg = f"invalid unset command at line {lexer.get_pos().row - 1}"
+            raise FgtConfigSyntaxError(msg)
 
         return tokens[0], FgtConfigUnset()
 
@@ -330,9 +326,8 @@ class FgtConfigParser:
         if entry == 'config':
             return cls._parse_config(lexer)
 
-        raise FgtConfigSyntaxError(
-            f"invalid entry '{entry[:10]}' near {lexer.get_pos().format()}"
-        )
+        msg = f"invalid entry '{entry[:10]}' near {lexer.get_pos().format()}"
+        raise FgtConfigSyntaxError(msg)
 
     @classmethod
     def _parse_table_entry(
@@ -347,9 +342,8 @@ class FgtConfigParser:
         """
         edit_key: FgtConfigTokens = lexer.next_parameters()
         if len(edit_key) != 1:
-            raise FgtConfigSyntaxError(
-                f"invalid table configuration near {lexer.get_pos().format()}"
-            )
+            msg = f"invalid table configuration near {lexer.get_pos().format()}"
+            raise FgtConfigSyntaxError(msg)
 
         # parse until next keyword or end keyword.  The end keyword is accepted only in a vdom
         # root configuration.  A configuration file including vdoms contains a table param without
@@ -388,9 +382,8 @@ class FgtConfigParser:
         # get config keys
         config_keys: FgtConfigTokens = lexer.next_parameters()
         if len(config_keys) == 0:
-            raise FgtConfigSyntaxError(
-                f"invalid config near {lexer.get_pos().format()}"
-            )
+            msg = f"invalid config near {lexer.get_pos().format()}"
+            raise FgtConfigSyntaxError(msg)
 
         # parse until end keyword
         token = lexer.next_snl_token()
@@ -468,14 +461,14 @@ class FgtConfigParser:
                         if isinstance(value, FgtConfigObject):
                             vdoms_config[entry] = factory_fn(comments.version, value)
                         else:
-                            raise TypeError(type(value))
+                            msg = f"invalid type '{type(value)}' at line {lexer.get_pos().row - 1}"
+                            raise TypeError(msg)
                 else:
                     global_config[k] = v
 
             else:
-                raise FgtConfigSyntaxError(
-                    f"invalid entry '{token[:10]}' near {lexer.get_pos().format()}"
-                )
+                msg = f"invalid entry '{token[:10]}' near {lexer.get_pos().format()}"
+                raise FgtConfigSyntaxError(msg)
 
             token = lexer.next_snl_token(raise_eos=False)
 
