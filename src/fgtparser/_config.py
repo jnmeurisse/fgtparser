@@ -674,7 +674,7 @@ class FgtConfig:
         if self.multi_vdom:
             output.append('')
             output.append('config vdom')
-            for k in self.vdoms.keys():
+            for k in self.vdoms:
                 output.append('edit ' + k)
                 output.append('next')
             output.append('end')
