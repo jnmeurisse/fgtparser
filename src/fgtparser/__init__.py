@@ -11,24 +11,24 @@ __version__ = '1.0'
 import io
 from pathlib import Path
 
-from ._config import FgtConfig as FgtConfig
-from ._config import FgtConfigComments as FgtConfigComments
-from ._config import FgtConfigItem as FgtConfigItem
-from ._config import FgtConfigNode as FgtConfigNode
-from ._config import FgtConfigObject as FgtConfigObject
-from ._config import FgtConfigRoot as FgtConfigRoot
-from ._config import FgtConfigSet as FgtConfigSet
-from ._config import FgtConfigStack as FgtConfigStack
-from ._config import FgtConfigTable as FgtConfigTable
-from ._config import FgtConfigTraverseCallback as FgtConfigTraverseCallback
-from ._config import FgtConfigUnset as FgtConfigUnset
-from ._config import FgtNodeTransition as FgtNodeTransition
-from ._config import qus as qus
-from ._config import uqs as uqs
-from ._parser import FgtConfigEosError as FgtConfigEosError
-from ._parser import FgtConfigParser as FgtConfigParser
-from ._parser import FgtConfigRootFactory as FgtConfigRootFactory
-from ._parser import FgtConfigSyntaxError as FgtConfigSyntaxError
+from .config import FgtConfig as FgtConfig
+from .config import FgtConfigComments as FgtConfigComments
+from .config import FgtConfigItem as FgtConfigItem
+from .config import FgtConfigNode as FgtConfigNode
+from .config import FgtConfigObject as FgtConfigObject
+from .config import FgtConfigRoot as FgtConfigRoot
+from .config import FgtConfigSet as FgtConfigSet
+from .config import FgtConfigStack as FgtConfigStack
+from .config import FgtConfigTable as FgtConfigTable
+from .config import FgtConfigTraverseCallback as FgtConfigTraverseCallback
+from .config import FgtConfigUnset as FgtConfigUnset
+from .config import FgtNodeTransition as FgtNodeTransition
+from .config import qus as qus
+from .config import uqs as uqs
+from .parser import FgtConfigEosError as FgtConfigEosError
+from .parser import FgtConfigParser as FgtConfigParser
+from .parser import FgtConfigRootFactory as FgtConfigRootFactory
+from .parser import FgtConfigSyntaxError as FgtConfigSyntaxError
 
 
 def set_root_config_factory(factory: FgtConfigRootFactory) -> None:

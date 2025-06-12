@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final, TextIO, cast, final
 
-from ._config import (
+from .config import (
     FgtConfig,
     FgtConfigComments,
     FgtConfigNode,
