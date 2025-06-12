@@ -412,7 +412,8 @@ class FgtConfigTable(FgtConfigBody):
         elif isinstance(item, str):
             value = super().get(qus(item))
         else:
-            raise TypeError("Invalid key type")
+            msg = f"'{type(item)}' is not a valid type"
+            raise TypeError(msg)
 
         if value and not isinstance(value, FgtConfigObject):
             msg = f"'{item}' is not of type 'FgtConfigObject'"
@@ -514,7 +515,7 @@ class FgtConfigRoot(FgtConfigObject):
 
     def traverse(
             self,
-            key: str,
+            key: str,                           # noqa: ARG002
             fn: FgtConfigTraverseCallback,
             parents: FgtConfigStack,
             data: Any
