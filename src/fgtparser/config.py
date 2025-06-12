@@ -673,23 +673,16 @@ class FgtConfig:
 
         output: list[str] = []
         if self.multi_vdom:
-            output.append('')
-            output.append('config vdom')
+            output.extend(('', 'config vdom'))
             for k in self.vdoms:
-                output.append('edit ' + k)
-                output.append('next')
-            output.append('end')
-            output.append('')
-            output.append('config global')
+                output.extend(('edit ' + k, 'next'))
+            output.extend(('end', '', 'config global'))
             self.root.traverse('', append_entry, FgtConfigStack(), output)
-            output.append('end')
-            output.append('')
+            output.extend(('end', ''))
             for k, v in self.vdoms.items():
-                output.append('config vdom')
-                output.append('edit ' + k)
+                output.extend(('config vdom', 'edit ' + k))
                 v.traverse('', append_entry, deque(), output)
-                output.append('end')
-                output.append('')
+                output.extend(('end', ''))
         else:
             self.root.traverse('', append_entry, FgtConfigStack(), output)
         return output
