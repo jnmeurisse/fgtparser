@@ -41,8 +41,8 @@ def get_root_config_factor() -> FgtConfigRootFactory:
     return FgtConfigParser.get_root_config_factory()
 
 
-def parse_string(config_value: str) -> FgtConfig:
-    """ Parse a FortiGate configuration string.
+def loads(config_value: str) -> FgtConfig:
+    """ Load a FortiGate configuration from a string.
 
     :param config_value: the configuration.
     :return: a ``FgtConfig`` object.
@@ -52,8 +52,8 @@ def parse_string(config_value: str) -> FgtConfig:
         return FgtConfigParser.parse(config_stream)
 
 
-def load_file(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
-    """ Load a FortiGate configuration file.
+def load(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
+    """ Load a FortiGate configuration from a file.
 
     :param filename: the configuration filename.
     :param encoding: default encoding.
