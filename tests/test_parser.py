@@ -2,8 +2,13 @@ import unittest
 from collections import deque
 
 from fgtparser import (
-    parse_string, FgtConfig, FgtConfigObject, FgtConfigTable,
-    FgtConfigSet, FgtConfigRoot, FgtConfigSyntaxError
+    FgtConfig,
+    FgtConfigObject,
+    FgtConfigRoot,
+    FgtConfigSet,
+    FgtConfigSyntaxError,
+    FgtConfigTable,
+    parse_string,
 )
 
 
@@ -265,7 +270,7 @@ class TestParser(unittest.TestCase):
                 end
             """
 
-        def cb(enter, node, stack,  nodes):
+        def cb(enter, node, stack, nodes):
             if enter:
                 nodes.append(node[0])
 

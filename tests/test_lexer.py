@@ -1,7 +1,7 @@
 import io
 import unittest
 
-from fgtparser import FgtConfigParser, FgtConfigEosError, FgtConfigSyntaxError
+from src.fgtparser import FgtConfigEosError, FgtConfigParser, FgtConfigSyntaxError
 
 
 class TestLexer(unittest.TestCase):
