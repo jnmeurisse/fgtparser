@@ -28,8 +28,8 @@ example 1 here after or a configuration table as in the example 2.
         next
     end
 
-# 🧩 Features
-`FgtConfigParser.parse_file` parses a FortiGate backup file and returns 
+# Features
+The function `FgtConfigParser.parse_file` parses a FortiGate backup file and returns 
 an instance of `FgtConfig` that holds the configuration.  The main 
 properties of this object are
 - `multi_vdom`: True in multi-VDOM mode.
@@ -51,7 +51,7 @@ derived from `FgtConfigNode` class:
 retrieval of sub configuration nodes.  `FgtConfigRoot` is a derived class of `FgtConfigObject`.
 
 
-### 🏗 Class Hierarchy
+### Class Hierarchy
 
 ```text
 FgtConfigNode (abstract)
@@ -63,32 +63,26 @@ FgtConfigNode (abstract)
         └── FgtConfigRoot
 ```
 
-### 🔍 Key Classes
+### Key Classes & methods
 
-#### FgtConfig: Full configuration representation 
-Methods:
-- `multi_vdom` : True in multi-VDOM mode 
-- `root`: global or `config global` section
-- `vdoms`: named virtual domains
-- `comments`: configuration metadata and version information
+- `FgtConfig`: Full configuration representation
+  - `multi_vdom` : True in multi-VDOM mode 
+  - `root`: global or `config global` section
+  - `vdoms`: named virtual domains
+  - `comments`: configuration metadata and version information
 
-#### FgtConfigObject: dictionary of nested nodes (`FgtConfigSet`, `FgtConfigTable`, etc.)
-Methods:
-- `c_object(key)`: Get a config object (→ `FgtConfigObject`)
-- `c_table(key)` : Get a config table (→ `FgtConfigTable`)
-- `c_set(key)` : Get a config set (→ `FgtConfigSet`)  
-- `param(key)`: Get parameter (equivalent to `c_set(key)[0]`)
-- Attribute-style access (`obj.param`)
+- `FgtConfigObject`: dictionary of nested nodes (`FgtConfigSet`, `FgtConfigTable`, etc.)
+  - `c_object(key)`: Get a config object (→ `FgtConfigObject`)
+  - `c_table(key)` : Get a config table (→ `FgtConfigTable`)
+  - `c_set(key)` : Get a config set (→ `FgtConfigSet`)  
+  - `param(key)`: Get parameter (equivalent to `c_set(key)[0]`)
+  - Attribute-style access (`obj.param`)
 
-#### FgtConfigTable: dictionary of `edit` blocks (each as a `FgtConfigObject`)
-Method:
+- `FgtConfigTable`: dictionary of `edit` blocks (each as a `FgtConfigObject`)
   - `c_entry(key)`: Return a config entry by name or index (→ `FgtConfigObject`)
 
-#### FgtConfigSet: a `set` command
-method:
-- List-like access to parameters
-
-#### FgtConfigUnset: an `unset` command
+- `FgtConfigSet`: a `set` command
+- `FgtConfigUnset`: an `unset` command
 
 ---
 
@@ -131,5 +125,5 @@ ___
 Download wheel file from github and install it using pip (note: this package requires Python version >= 3.11) 
 
 ```
-pip3 install fgtparser-1.0-py3-none-any.whl
+pip3 install fgtparser-1.1-py3-none-any.whl
 ```
