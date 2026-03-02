@@ -3,8 +3,17 @@ import unittest
 from pathlib import Path
 from typing import cast
 
-from fgtparser import FgtConfigRoot, FgtConfigTable, FgtConfigObject, FgtConfigNode, FgtConfigSet
-from fgtparser import parse_file, parse_string, set_root_config_factory, uqs
+from src.fgtparser import (
+    FgtConfigNode,
+    FgtConfigObject,
+    FgtConfigRoot,
+    FgtConfigSet,
+    FgtConfigTable,
+    load,
+    loads,
+    set_root_config_factory,
+    uqs,
+)
 from tests import make_test_path
 
 
@@ -12,22 +21,22 @@ class TestConfig(unittest.TestCase):
     @staticmethod
     def _same_config(cfg1: list[str], cfg2: list[str]) -> bool:
         # Compare line by line for equality.  Leading and trailing spaces are not significant.
-        return all(line1.strip() == line2.strip() for line1, line2 in zip(cfg1, cfg2))
+        return all(line1.strip() == line2.strip() for line1, line2 in zip(cfg1, cfg2, strict=False))
 
     @staticmethod
     def _parse_and_compare(filename: Path, encoding: str = 'ascii') -> bool:
         # Load and parse the configuration file
-        config = parse_file(filename, encoding)
+        config = load(filename, encoding)
 
         # Write the configuration to a memory file
         output_buffer = io.StringIO()
-        config.write(output_buffer, True)
+        config.dump(output_buffer, True)
 
         # Split as a list of strings
         text_config_1 = output_buffer.getvalue().split("\n")
 
         # Do the same with the file
-        with open(filename, "r", encoding=encoding) as f:
+        with open(filename, encoding=encoding) as f:
             text_config_2 = f.read().split("\n")
 
         # and compare for equality
@@ -58,7 +67,7 @@ class TestConfig(unittest.TestCase):
 
         set_root_config_factory(lambda _, cfg: RootConfig(cfg))
 
-        config = parse_file(make_test_path("test3.conf"))
+        config = load(make_test_path("test3.conf"))
         config_root = cast(RootConfig, config.root)
 
         config_global = config_root.system_global()
@@ -86,7 +95,7 @@ class TestConfig(unittest.TestCase):
         )
 
     def test_section(self) -> None:
-        config = parse_file(make_test_path("test3.conf"))
+        config = load(make_test_path("test3.conf"))
         config_root = config.root
 
         for key, _ in config_root.sections("router  bgp"):
@@ -98,7 +107,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(8, section_count)
 
     def test_table(self) -> None:
-        config = parse_file(make_test_path("test3.conf"))
+        config = load(make_test_path("test3.conf"))
         config_root = config.root
 
         config_address = config_root.c_table("firewall address")
@@ -108,7 +117,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(dmz_address_2['subnet'], FgtConfigSet(['172.16.1.0', '255.255.255.0']))
 
     def test_walk(self) -> None:
-        config = parse_file(make_test_path("test3.conf"))
+        config = load(make_test_path("test3.conf"))
         config_root = config.root
 
         replace_messages_walk = []
@@ -133,7 +142,7 @@ class TestConfig(unittest.TestCase):
                 end
             end
         """
-        config = parse_string(config_string)
+        config = loads(config_string)
         config_test = config.root.c_object("test")
         self.assertIsInstance(config_test.example, FgtConfigNode)
         self.assertIsInstance(config_test.example, FgtConfigObject)
@@ -164,7 +173,7 @@ class TestConfig(unittest.TestCase):
                 next
             end
         """
-        config = parse_string(config_string)
+        config = loads(config_string)
         config_test = config.root.c_table("test")
         self.assertIsInstance(config_test, FgtConfigNode)
         self.assertIsInstance(config_test, FgtConfigTable)
@@ -179,7 +188,7 @@ class TestConfig(unittest.TestCase):
         self.assertIsInstance(config_test.c_entry(1), FgtConfigObject)
 
     def test_encoding(self):
-        config = parse_file(make_test_path("test4.conf"), encoding='latin-1')
+        config = load(make_test_path("test4.conf"), encoding='latin-1')
         config_root = config.root
         self.assertEqual(uqs(config_root.c_table("user local").c_entry('André').comment), 'Utilisateur avancé')
 
@@ -188,7 +197,7 @@ class TestConfig(unittest.TestCase):
             config test
             end
         """
-        config = parse_string(config_string)
+        config = loads(config_string)
         config_test = config.root.c_object("test")
         self.assertEqual(config_test.param('item1'), None)
         self.assertEqual(config_test.param('item1', 'default'), 'default')

@@ -2,12 +2,11 @@
 import sys
 from typing import Any
 
-from fgtparser import parse_file
-from fgtparser import FgtConfigItem, FgtConfigStack, FgtConfigSet
+from src.fgtparser import FgtConfigItem, FgtConfigSet, FgtConfigStack, FgtNodeTransition, load
 
 
-def hide_password(enter: bool, item: FgtConfigItem, stack: FgtConfigStack, data: Any) -> None:
-    if enter:
+def hide_password(transition: FgtNodeTransition, item: FgtConfigItem, stack: FgtConfigStack, data: Any) -> None:
+    if transition == FgtNodeTransition.ENTER_NODE:
         key = item[0]
         value = item[1]
         if key == 'password' and isinstance(value, FgtConfigSet) and value[0] == 'ENC':
@@ -16,9 +15,9 @@ def hide_password(enter: bool, item: FgtConfigItem, stack: FgtConfigStack, data:
 
 
 def main() -> None:
-    config = parse_file("example.conf")
+    config = load("example.conf")
     config.root.traverse('', hide_password, FgtConfigStack(), None)
-    config.write(sys.stdout, True, None, None)
+    config.dump(sys.stdout, True, None, None)
 
 
 if __name__ == '__main__':
