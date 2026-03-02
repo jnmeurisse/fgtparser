@@ -612,7 +612,7 @@ class FgtConfig:
         """ Return a dictionary of VDOMs. """
         return self._vdoms
 
-    def make_config(
+    def dumps(
             self,
             item_filter: FgtConfigFilterCallback | None = None,
             data: Any | None = None
@@ -633,12 +633,14 @@ class FgtConfig:
         :return: A list of strings representing the configuration.
         """
 
-        def append_entry(
+        def append_config_item(
                 transition: FgtNodeTransition,
                 item: FgtConfigItem,
                 parents: FgtConfigStack,
                 output_list: list[str]
         ) -> None:
+            """ Append a configuration item to the output list """
+
             # check if we skip this item
             if item_filter and not item_filter(item, parents, data):
                 return
@@ -647,29 +649,28 @@ class FgtConfig:
             key = item[0]
             value = item[1]
 
-            if isinstance(value, FgtConfigSet) and transition == FgtNodeTransition.ENTER_NODE:
-                line = f"set {key} {' '.join(value)}"
-            elif isinstance(value, FgtConfigUnset) and transition == FgtNodeTransition.ENTER_NODE:
-                line = f"unset {key}"
-            elif isinstance(value, (FgtConfigTable, FgtConfigObject)):
-                if len(parents) == 0 or isinstance(parents[-1][1],
-                                                   FgtConfigObject
-                                                   ):
-                    line = f"config {key}" if transition == FgtNodeTransition.ENTER_NODE else "end"
-                elif len(parents) > 0 or isinstance(parents[-1][1],
-                                                    FgtConfigTable
-                                                    ):
-                    line = f"edit {key}" if transition == FgtNodeTransition.ENTER_NODE else "next"
-                else:
-                    raise ValueError
-            else:
-                raise ValueError
-
             # create indentation spaces to prefix the line
             spaces: str = ' ' * (len(parents) * self._indent)
 
-            # append it to the output list
-            output_list.append(spaces + line)
+            if isinstance(value, FgtConfigSet):
+                if transition == FgtNodeTransition.ENTER_NODE:
+                    line = f"set {key} {' '.join(value)}"
+                    output_list.append(spaces + line)
+            elif isinstance(value, FgtConfigUnset):
+                if transition == FgtNodeTransition.ENTER_NODE:
+                    line = f"unset {key}"
+                    output_list.append(spaces + line)
+            elif isinstance(value, (FgtConfigTable, FgtConfigObject)):
+                if len(parents) == 0 or isinstance(parents[-1][1], FgtConfigObject):
+                    line = f"config {key}" if transition == FgtNodeTransition.ENTER_NODE else "end"
+                    output_list.append(spaces + line)
+                elif len(parents) > 0 or isinstance(parents[-1][1], FgtConfigTable):
+                    line = f"edit {key}" if transition == FgtNodeTransition.ENTER_NODE else "next"
+                    output_list.append(spaces + line)
+                else:
+                    raise ValueError
+            else:
+                raise TypeError
 
         output: list[str] = []
         if self.multi_vdom:
@@ -677,20 +678,20 @@ class FgtConfig:
             for k in self.vdoms:
                 output.extend(('edit ' + k, 'next'))
             output.extend(('end', '', 'config global'))
-            self.root.traverse('', append_entry, FgtConfigStack(), output)
+            self.root.traverse('', append_config_item, FgtConfigStack(), output)
             output.extend(('end', ''))
             for k, v in self.vdoms.items():
                 output.extend(('config vdom', 'edit ' + k))
-                v.traverse('', append_entry, deque(), output)
+                v.traverse('', append_config_item, deque(), output)
                 output.extend(('end', ''))
         else:
-            self.root.traverse('', append_entry, FgtConfigStack(), output)
+            self.root.traverse('', append_config_item, FgtConfigStack(), output)
         return output
 
     def __repr__(self) -> str:
-        return "\n".join(self.make_config())
+        return "\n".join(self.dumps())
 
-    def write(
+    def dump(
             self,
             file: TextIO,
             include_comments: bool,
@@ -709,5 +710,5 @@ class FgtConfig:
         if include_comments and len(self.comments) > 0:
             file.write("\n".join(self.comments))
             file.write("\n")
-        file.write("\n".join(self.make_config(item_filter, data)))
+        file.write("\n".join(self.dumps(item_filter, data)))
         file.write("\n")
