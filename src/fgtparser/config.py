@@ -28,7 +28,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterator
 from enum import Enum, auto
-from typing import Any, Final, Optional, Self, TextIO, cast, final
+from typing import Any, Final, Optional, Self, TextIO, cast, final, Iterable
 
 FgtConfigToken = str
 """ A token in a config file. A token is a sequence of characters. """
@@ -415,7 +415,10 @@ class FgtConfigTable(FgtConfigBody):
             msg = f"'{type(item)}' is not a valid type"
             raise TypeError(msg)
 
-        if value and not isinstance(value, FgtConfigObject):
+        if value is None:
+            raise KeyError(item)
+
+        if not isinstance(value, FgtConfigObject):
             msg = f"'{item}' is not of type 'FgtConfigObject'"
             raise TypeError(msg)
 
@@ -433,14 +436,23 @@ class FgtConfigTable(FgtConfigBody):
 
 
 @final
-class FgtConfigSet(FgtConfigNode, list[str]):
+class FgtConfigSet(FgtConfigNode):
     """ Represents a SET command. """
-    def __init__(self, parameters: str | list[str]) -> None:
-        super().__init__(parameters)
+    def __init__(self, parameters: Iterable[str]) -> None:
+        self._parameters = list(parameters)
+
+    def __iter__(self):
+        return iter(self._parameters)
+
+    def __len__(self):
+        return len(self._parameters)
+
+    def __getitem__(self, idx: int):
+        return self._parameters[idx]
 
     def __eq__(self, other) -> bool:
         if isinstance(other, FgtConfigSet):
-            result = super().__eq__(other)
+            result = self._parameters == other._parameters
         elif isinstance(other, list):
             result = self == FgtConfigSet(other)
         elif isinstance(other, str):
