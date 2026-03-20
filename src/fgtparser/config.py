@@ -459,7 +459,7 @@ class FgtConfigSet(FgtConfigNode):
         elif isinstance(other, str):
             result = self == FgtConfigSet([other])
         else:
-            raise NotImplementedError
+            raise NotImplemented
         return result
 
     def traverse(
@@ -590,10 +590,9 @@ class FgtConfig:
         :raises ValueError: If any value in the `root` dictionary is not an
             instance of `FgtConfigObject` or `FgtConfigTable`.
         """
-        if not all(isinstance(v, (FgtConfigObject, FgtConfigTable)) for v in
-                   root.values()
-                   ):
-            raise ValueError
+        if not all(isinstance(v, (FgtConfigObject, FgtConfigTable)) for v in root.values()):
+            msg = "All values in 'root' must be FgtConfigObject or FgtConfigTable instances."
+            raise ValueError(msg)
 
         self._comments: FgtConfigComments = comments
         self._root: FgtConfigRoot = root
