@@ -479,7 +479,16 @@ class FgtConfigParser:
         if len(vdoms_config) == 0:
             config_section = global_config
         else:
-            config_section = cast(FgtConfigObject, global_config['global'])
+            global_section = global_config.get('global')
+            if global_section is None:
+                msg = "missing 'config global' section in vdom configuration"
+                raise FgtConfigSyntaxError(msg)
+
+            if not isinstance(global_section, FgtConfigObject):
+                msg = f"unexpected type '{type(global_section).__name__}' for 'config global' section"
+                raise TypeError(msg)
+
+            config_section = global_section
 
         return FgtConfig(
             comments,
