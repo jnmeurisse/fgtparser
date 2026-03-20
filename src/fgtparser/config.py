@@ -457,7 +457,7 @@ class FgtConfigSet(FgtConfigNode):
         if isinstance(other, list):
             return self == FgtConfigSet(other)
         if isinstance(other, str):
-            return self == FgtConfigSet([other])
+            return len(self._parameters) == 1 and self._parameters[0] == other
         return NotImplemented
 
     def traverse(
