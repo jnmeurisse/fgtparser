@@ -279,7 +279,7 @@ class FgtConfigObject(FgtConfigBody):
             self,
             key: str,
             default: Optional['FgtConfigObject'] = None
-    ) -> Self:
+    ) -> Optional['FgtConfigObject']:
         """
         Retrieve a configuration object by key, optionally returning a default.
 
