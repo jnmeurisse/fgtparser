@@ -7,6 +7,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pickle import GLOBAL
 from typing import Final, TextIO, final
 
 from .config import (
@@ -87,6 +88,7 @@ class FgtConfigParser:
     https://docs.fortinet.com/document/fortigate/7.6.2/administration-guide/508024/command-syntax
     """
     VDOM: Final[str] = 'vdom'
+    GLOBAL: Final[str] = 'global'
 
     @final
     class Lexer:
@@ -482,7 +484,7 @@ class FgtConfigParser:
         if len(vdoms_config) == 0:
             config_section = global_config
         else:
-            global_section = global_config.get('global')
+            global_section = global_config.get(GLOBAL)
             if global_section is None:
                 msg = "missing 'config global' section in vdom configuration"
                 raise FgtConfigSyntaxError(msg)
