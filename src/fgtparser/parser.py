@@ -7,7 +7,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Final, TextIO, cast, final
+from typing import Final, TextIO, final
 
 from .config import (
     FgtConfig,
