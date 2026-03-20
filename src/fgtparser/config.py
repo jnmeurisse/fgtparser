@@ -190,7 +190,8 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
             elif isinstance(node, (FgtConfigSet, FgtConfigUnset)):
                 yield path, node
             else:
-                raise TypeError
+                msg = f"Unexpected node type '{type(node).__name__}' at path '{path}'"
+                raise TypeError(msg)
 
 
 class FgtConfigObject(FgtConfigBody):
@@ -458,7 +459,7 @@ class FgtConfigSet(FgtConfigNode):
         elif isinstance(other, str):
             result = self == FgtConfigSet([other])
         else:
-            raise TypeError
+            raise NotImplementedError
         return result
 
     def traverse(
