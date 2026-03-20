@@ -453,7 +453,7 @@ class FgtConfigSet(FgtConfigNode):
         if isinstance(other, FgtConfigSet):
             return self._parameters == other._parameters
         if isinstance(other, list):
-            return self == FgtConfigSet(other)
+            return self._parameters == other
         if isinstance(other, str):
             return len(self._parameters) == 1 and self._parameters[0] == other
         return NotImplemented
