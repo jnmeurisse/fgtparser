@@ -29,7 +29,7 @@ FgtConfigRootFactory = Callable[[str, FgtConfigObject], FgtConfigRoot]
 """ Callable used to instantiate a `FgConfigRoot`.  """
 
 
-@dataclass
+@dataclass(frozen=True)
 class _StreamPosition:
     """ A position in a stream of characters """
     row: int
@@ -104,10 +104,10 @@ class FgtConfigParser:
 
         def _update_position(self, c: _Char) -> None:
             """ Keep track of the (line, column) position in the input stream """
-            self._pos.col += 1
             if c == self.EOL:
-                self._pos.row += 1
-                self._pos.col = 1
+                self._pos = _StreamPosition(self._pos.row + 1, 1)
+            else:
+                self._pos = _StreamPosition(self._pos.row, self._pos.col + 1)
 
         @classmethod
         def _is_eol(cls, token: FgtConfigToken) -> bool:
