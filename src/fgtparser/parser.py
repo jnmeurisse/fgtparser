@@ -193,14 +193,15 @@ class FgtConfigParser:
                 elif c == '#':
                     # This is a comment line.
                     # Fill the token until the end of line is encountered.
-                    token = ''
+                    chars = []
                     while not self._is_eol(c):
-                        token += c
+                        chars.append(c)
                         c = self._next()
+                    token = ''.join(chars)
 
                 elif c == self.QUOTE:
                     # a quoted string
-                    token = c
+                    chars = [c]
                     while True:
                         c = self._next()
                         if self.is_eos(c):
@@ -208,27 +209,29 @@ class FgtConfigParser:
                             raise FgtConfigSyntaxError(msg)
 
                         if c == '\\':
-                            token += c
+                            chars.append(c)
                             c = self._next()
                             if self.is_eos(c):
                                 msg = f"escape error at line {self.get_pos().row}"
                                 raise FgtConfigSyntaxError(msg)
-                            token += c
+                            chars.append(c)
 
                         elif c == self.QUOTE:
-                            token += c
+                            chars.append(c)
                             break
                         else:
-                            token += c
+                            chars.append(c)
+                    token = ''.join(chars)
 
                 else:
                     # This is a word (unquoted string).
                     # Fill until a space is found.
-                    token = ""
+                    chars = []
                     while not (c.isspace() or self._is_eol(c)):
-                        token += c
+                        chars.append(c)
                         c = self._next()
                     self._unget(c)
+                    token = ''.join(chars)
 
             return token
 
