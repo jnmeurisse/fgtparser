@@ -80,8 +80,7 @@ def uqs(arg: str) -> str:
     if len(arg) < 2 or (arg[0] != '"' or arg[-1] != '"'):
         res = arg
     else:
-        res = arg.replace('\\"', '"').replace('\\\\', '\\')[1:-1]
-
+        res = arg[1:-1].replace('\\\\', '\\').replace('\\"', '"')
     return res
 
 
@@ -306,7 +305,7 @@ class FgtConfigObject(FgtConfigBody):
             self,
             key: str,
             default: Optional['FgtConfigSet'] = None
-    ) -> 'FgtConfigSet':
+    ) -> Optional['FgtConfigSet']:
         """
         Retrieve a configuration set by key, optionally returning a default.
 
@@ -333,7 +332,7 @@ class FgtConfigObject(FgtConfigBody):
             self,
             key: str,
             default: str | None = None
-    ) -> str:
+    ) -> Optional[str]:
         """
         Return the value of a simple SET command.
 
@@ -351,14 +350,13 @@ class FgtConfigObject(FgtConfigBody):
             parameter.
         """
         value = self.c_set(key, FgtConfigSet([default]) if default is not None else None)
+        if value is None:
+            return None
 
-        if value:
-            if len(value) != 1:
-                msg = "param method is available only on SET command with one argument"
-                raise ValueError(msg)
-            value = value[0]
-
-        return value
+        if len(value) != 1:
+            msg = "param method is available only on SET command with one argument"
+            raise ValueError(msg)
+        return value[0]
 
 
 class FgtConfigTable(FgtConfigBody):
@@ -429,9 +427,9 @@ class FgtConfigTable(FgtConfigBody):
             self,
             key: str | int,
             default: FgtConfigObject | None = None
-    ) -> FgtConfigObject:
+    ) -> Optional[FgtConfigObject]:
         try:
-            return cast(FgtConfigObject, self[key])
+            return self[key]
         except KeyError:
             return default
 
@@ -550,14 +548,19 @@ class FgtConfigComments(FgtConfigTokens):
     def version(self) -> str:
         """ Return the FortiOS version. """
         config_version = self._config_version()[0]
-        return config_version[config_version.index('-') + 1:]
+        sep = config_version.find('-')
+        if sep == -1:
+            return '?'
+        return config_version[sep + 1:]
 
     @property
     def model(self) -> str:
         """ Return the firewall model. """
         config_version = self._config_version()[0]
-        return config_version[0:config_version.index('-')]
-
+        sep = config_version.find('-')
+        if sep == -1:
+            return '?'
+        return config_version[:sep]
 
 @final
 class FgtConfig:
