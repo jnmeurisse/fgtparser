@@ -676,7 +676,7 @@ class FgtConfig:
                 if len(parents) == 0 or isinstance(parents[-1][1], FgtConfigObject):
                     line = f"config {key}" if transition == FgtNodeTransition.ENTER_NODE else "end"
                     output_list.append(spaces + line)
-                elif len(parents) > 0 or isinstance(parents[-1][1], FgtConfigTable):
+                elif isinstance(parents[-1][1], FgtConfigTable):
                     line = f"edit {key}" if transition == FgtNodeTransition.ENTER_NODE else "next"
                     output_list.append(spaces + line)
                 else:
