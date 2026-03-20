@@ -441,13 +441,13 @@ class FgtConfigSet(FgtConfigNode):
     def __init__(self, parameters: Iterable[str]) -> None:
         self._parameters = list(parameters)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._parameters)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._parameters)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> str:
         return self._parameters[idx]
 
     def __eq__(self, other) -> bool:
