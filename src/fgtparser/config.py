@@ -437,6 +437,7 @@ class FgtConfigTable(FgtConfigBody):
 @final
 class FgtConfigSet(FgtConfigNode):
     """ Represents a SET command. """
+
     def __init__(self, parameters: Iterable[str]) -> None:
         self._parameters = list(parameters)
 
@@ -524,7 +525,7 @@ class FgtConfigRoot(FgtConfigObject):
 
     def traverse(
             self,
-            key: str,                           # noqa: ARG002
+            key: str,  # noqa: ARG002
             fn: FgtConfigTraverseCallback,
             parents: FgtConfigStack,
             data: Any
@@ -562,6 +563,7 @@ class FgtConfigComments(FgtConfigTokens):
             return '?'
         return config_version[:sep]
 
+
 @final
 class FgtConfig:
     """ A FortiGate configuration. """
@@ -591,9 +593,10 @@ class FgtConfig:
         :raises ValueError: If any value in the `root` dictionary is not an
             instance of `FgtConfigObject` or `FgtConfigTable`.
         """
-        if not all(isinstance(v, (FgtConfigObject, FgtConfigTable)) for v in root.values()):
-            msg = "All values in 'root' must be FgtConfigObject or FgtConfigTable instances."
-            raise ValueError(msg)
+        for k, v in root.items():
+            if not isinstance(v, (FgtConfigObject, FgtConfigTable)):
+                msg = f"Value at key '{k}' must be FgtConfigObject or FgtConfigTable, got {type(v).__name__}."
+                raise ValueError(msg)
 
         self._comments: FgtConfigComments = comments
         self._root: FgtConfigRoot = root
