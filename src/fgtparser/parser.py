@@ -296,7 +296,7 @@ class FgtConfigParser:
         The method returns a pair consisting of the parameter name and an empty
         list of values : (<parameter_name>, []).
 
-        :return: the parameter name and `FgtConfigSet` object.
+        :return: the parameter name and `FgtConfigUnset` object.
         :raise FgtConfigSyntaxError: if the unset command can not be parsed.
         """
         tokens: FgtConfigTokens = lexer.next_parameters()
