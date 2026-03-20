@@ -453,14 +453,12 @@ class FgtConfigSet(FgtConfigNode):
 
     def __eq__(self, other) -> bool:
         if isinstance(other, FgtConfigSet):
-            result = self._parameters == other._parameters
-        elif isinstance(other, list):
-            result = self == FgtConfigSet(other)
-        elif isinstance(other, str):
-            result = self == FgtConfigSet([other])
-        else:
-            raise NotImplemented
-        return result
+            return self._parameters == other._parameters
+        if isinstance(other, list):
+            return self == FgtConfigSet(other)
+        if isinstance(other, str):
+            return self == FgtConfigSet([other])
+        return NotImplemented
 
     def traverse(
             self,
