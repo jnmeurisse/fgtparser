@@ -453,8 +453,6 @@ class FgtConfigSet(FgtConfigNode):
     def __eq__(self, other) -> bool:
         if isinstance(other, FgtConfigSet):
             return self._parameters == other._parameters
-        if isinstance(other, list):
-            return self._parameters == other
         if isinstance(other, str):
             return len(self._parameters) == 1 and self._parameters[0] == other
         return NotImplemented

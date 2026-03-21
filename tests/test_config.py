@@ -86,7 +86,7 @@ class TestConfig(unittest.TestCase):
 
         config_interface = config_root.interface()
         self.assertEqual(
-            ["10.1.1.10", "255.255.255.0"],
+            FgtConfigSet(["10.1.1.10", "255.255.255.0"]),
             config_interface.c_entry('port1').ip
         )
         self.assertEqual(
@@ -112,7 +112,7 @@ class TestConfig(unittest.TestCase):
 
         config_address = config_root.c_table("firewall address")
         dmz_address_1 = config_address.c_entry('DMZ')
-        self.assertEqual(dmz_address_1.c_set('subnet'), ['172.16.1.0', '255.255.255.0'])
+        self.assertEqual(dmz_address_1.c_set('subnet'), FgtConfigSet(['172.16.1.0', '255.255.255.0']))
         dmz_address_2 = config_address['DMZ']
         self.assertEqual(dmz_address_2['subnet'], FgtConfigSet(['172.16.1.0', '255.255.255.0']))
 
@@ -201,3 +201,21 @@ class TestConfig(unittest.TestCase):
         config_test = config.root.c_object("test")
         self.assertEqual(config_test.param('item1'), None)
         self.assertEqual(config_test.param('item1', 'default'), 'default')
+
+    def test_comparison(self):
+        config = load(make_test_path("test4.conf"), encoding='latin-1')
+
+        config_global = config.root.c_object('system global')
+        self.assertEqual(config_global.c_set('alias'), '"FGT-HQ"')
+        self.assertEqual('"FGT-HQ"', config_global.c_set('alias'))
+        self.assertEqual(config_global.c_set('alias'), FgtConfigSet(['"FGT-HQ"']))
+        self.assertEqual(FgtConfigSet(['"FGT-HQ"']), config_global.c_set('alias'))
+
+        config_interface = config.root.c_table('system interface')
+        config_port = config_interface['port1']
+        allowed_access = FgtConfigSet(['ping', 'https', 'ssh',  'http', 'fgfm'])
+        self.assertEqual(config_port.c_set('allowaccess'), allowed_access)
+        self.assertEqual(allowed_access, config_port.c_set('allowaccess'))
+
+        self.assertEqual(config_port.allowaccess, allowed_access)
+        self.assertEqual(allowed_access, config_port.allowaccess)
