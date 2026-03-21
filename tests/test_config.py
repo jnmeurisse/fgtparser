@@ -220,3 +220,14 @@ class TestConfig(unittest.TestCase):
 
         self.assertEqual(config_port.allowaccess, allowed_access)
         self.assertEqual(allowed_access, config_port.allowaccess)
+
+    def test_get_attr(self):
+        config = load(make_test_path("test4.conf"), encoding='latin-1')
+        config_global = config.root.c_object('system global')
+        self.assertEqual(config_global.alias, '"FGT-HQ"')
+
+        with self.assertRaises(AttributeError):
+            print(config_global.xxx)
+
+        with self.assertRaises(AttributeError):
+            print(config_global.len)
