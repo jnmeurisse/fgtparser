@@ -28,7 +28,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterator
 from enum import Enum, auto
-from typing import Any, Final, Optional, Self, TextIO, cast, final, Iterable
+from typing import Any, Final, Optional, TextIO, final, Iterable
 
 FgtConfigToken = str
 """ A token in a config file. A token is a sequence of characters. """
