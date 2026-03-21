@@ -234,18 +234,14 @@ class FgtConfigObject(FgtConfigBody):
         * `conf_obj.c_set('example')` → Returns a `FgtConfigSet`
     """
 
-    def __getattr__(self, key: str) -> FgtConfigNode | str:
+    def __getattr__(self, key: str) -> FgtConfigNode:
         """
         Return the sub-command using object.param syntax.
         """
         if key not in self.keys():
             return super().__getattribute__(key)
 
-        attribute = self.get(key)
-        if isinstance(attribute, FgtConfigSet) and len(attribute) == 1:
-            return attribute[0]
-
-        return attribute
+        return self.get(key)
 
     def c_table(
             self,
@@ -344,8 +340,7 @@ class FgtConfigObject(FgtConfigBody):
             found. Defaults to ``None``.
         :return: The value of the parameter or the ``default`` value if the
             parameter is not defined in the CONFIG object.
-        :raises TypeError: If the retrieved value is not from a
-            ``FgtConfigSet``.
+        :raises TypeError: If the retrieved value is not from a ``FgtConfigSet``.
         :raises ValueError: If the SET command defines multiple values for the
             parameter.
         """
