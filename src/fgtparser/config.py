@@ -151,7 +151,7 @@ class FgtConfigNode(ABC):
         parents.append((key, self))
 
         for child_key, child_node in self.children():
-            child_node.traverse(child_key, fn, parents, data)
+            child_node.traverse(child_key, fn, parents, data, predicate)
 
         parents.pop()
         fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
@@ -827,11 +827,11 @@ class FgtConfig:
             for k in self.vdoms:
                 output.extend(('edit ' + k, 'next'))
             output.extend(('end', '', 'config global'))
-            self.root.traverse('', append_config_item, FgtConfigStack(), output)
+            self.root.traverse('', append_config_item, FgtConfigStack(), output, item_filter)
             output.extend(('end', ''))
             for k, v in self.vdoms.items():
                 output.extend(('config vdom', 'edit ' + k))
-                v.traverse('', append_config_item, deque(), output)
+                v.traverse('', append_config_item, deque(), output, item_filter)
                 output.extend(('end', ''))
         else:
             self.root.traverse('', append_config_item, FgtConfigStack(), output, item_filter)
