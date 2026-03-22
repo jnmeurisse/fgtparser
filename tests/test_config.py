@@ -241,3 +241,8 @@ class TestConfig(unittest.TestCase):
         self.assertEqual('say "hi"', uqs('"say \\"hi\\""'))
         self.assertEqual('back\\slash', uqs('"back\\\\slash"'))
         self.assertEqual('a\\"b', uqs('"a\\\\\\\"b"'))
+
+    def test_version(self):
+        config = load(make_test_path("test2.conf"), encoding='latin-1')
+        self.assertEqual(config.comments.version, '7.2.1-FW-build1237-220707')
+        self.assertEqual(config.comments.model, 'FGVMO6')

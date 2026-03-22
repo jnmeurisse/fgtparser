@@ -688,12 +688,12 @@ class FgtConfigComments:
     @property
     def version(self) -> str:
         """Return the FortiOS version, or ``'?'`` if not present."""
-        return self._parsed_version[1]
+        return self._parsed_version()[1]
 
     @property
     def model(self) -> str:
         """Return the firewall model, or ``'?'`` if not present."""
-        return self._parsed_version[0]
+        return self._parsed_version()[0]
 
 
 @final
