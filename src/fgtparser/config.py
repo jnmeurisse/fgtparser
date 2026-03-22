@@ -177,8 +177,6 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
         """
         return sorted(self._data.keys(), key=lambda s: s.lower())
 
-    # Ensure .get() and other dict-like methods work via MutableMapping mixins
-
 
 class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
     """ An abstract base class for a CONFIG table or a CONFIG object. """
@@ -511,6 +509,8 @@ class FgtConfigRoot(FgtConfigObject):
     This class provides methods for accessing sections within the root
     configuration and traversing through its entire configuration tree.
     """
+    def __init__(self, config: FgtConfigObject):
+        super().__init__(config._data)
 
     def sections(
             self,

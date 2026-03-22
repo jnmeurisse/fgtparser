@@ -8,7 +8,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from pickle import GLOBAL
-from typing import Final, TextIO, final
+from typing import Final, TextIO, final, Optional
 
 from .config import (
     FgtConfig,
@@ -26,7 +26,7 @@ from .config import (
 _Char = str
 """ The _Char type represents a single character."""
 
-FgtConfigRootFactory = Callable[[str, FgtConfigObject], FgtConfigRoot]
+FgtConfigRootFactory = Callable[[FgtConfigObject], FgtConfigRoot]
 """ Callable used to instantiate a `FgConfigRoot`.  """
 
 
@@ -416,29 +416,26 @@ class FgtConfigParser:
 
         return " ".join(config_keys), config
 
-    _root_config_factory: FgtConfigRootFactory = lambda _, cfg: FgtConfigRoot(cfg)
-
-    @classmethod
-    def get_root_config_factory(cls) -> FgtConfigRootFactory:
-        return FgtConfigParser._root_config_factory
-
-    @classmethod
-    def set_root_config_factory(cls, factory: FgtConfigRootFactory) -> None:
-        cls._root_config_factory = factory
+    @staticmethod
+    def _default_root_config_factory(cfg: FgtConfigObject) -> FgtConfigRoot:
+        return FgtConfigRoot(cfg)
 
     @classmethod
     def parse(
         cls,
         input_stream: TextIO,
+        factory_fn: Optional[FgtConfigRootFactory] = None
     ) -> FgtConfig:
         """ Parse a FortiGate configuration.
 
         :param input_stream: the configuration
+        :param factory_fn: optional factory function to override the default root factory
         :return: a FgtConfig object
         :raise FgtConfigSyntaxError: if a syntax error is detected
         """
-        # get a root factory
-        factory_fn = cls.get_root_config_factory()
+        # configure a root factory function
+        if factory_fn is None:
+            factory_fn = FgtConfigParser._default_root_config_factory
 
         # allocate various dictionaries
         comments = FgtConfigComments()
@@ -464,7 +461,7 @@ class FgtConfigParser:
                     # It does not matter since we preserve the name of the vdom.
                     for entry, value in v.items():
                         if isinstance(value, FgtConfigObject):
-                            vdoms_config[entry] = factory_fn(comments.version, value)
+                            vdoms_config[entry] = factory_fn(value)
                         else:
                             msg = f"invalid type '{type(value)}' at line {lexer.get_pos().row - 1}"
                             raise TypeError(msg)
@@ -497,6 +494,6 @@ class FgtConfigParser:
 
         return FgtConfig(
             comments,
-            factory_fn(comments.version, config_section),
+            factory_fn(config_section),
             vdoms_config
         )

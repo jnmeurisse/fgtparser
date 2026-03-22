@@ -10,6 +10,7 @@ __version__ = '1.0'
 
 import io
 from pathlib import Path
+from typing import Optional
 
 from .config import FgtConfig as FgtConfig
 from .config import FgtConfigComments as FgtConfigComments
@@ -31,34 +32,33 @@ from .parser import FgtConfigRootFactory as FgtConfigRootFactory
 from .parser import FgtConfigSyntaxError as FgtConfigSyntaxError
 
 
-def set_root_config_factory(factory: FgtConfigRootFactory) -> None:
-    """ Define the factory that the parser uses to create a ``FgtConfigRoot`` """
-    FgtConfigParser.set_root_config_factory(factory)
-
-
-def get_root_config_factor() -> FgtConfigRootFactory:
-    """ Return the current ``FgtConfigRoot`` factory. """
-    return FgtConfigParser.get_root_config_factory()
-
-
-def loads(config_value: str) -> FgtConfig:
+def loads(
+    config_value: str,
+    factory_fn: Optional[FgtConfigRootFactory] = None
+) -> FgtConfig:
     """ Load a FortiGate configuration from a string.
 
     :param config_value: the configuration.
+    :param factory_fn: optional factory function to override the default root factory
     :return: a ``FgtConfig`` object.
     :raise FgtConfigSyntaxError: if a syntax error is detected.
     """
     with io.StringIO(config_value) as config_stream:
-        return FgtConfigParser.parse(config_stream)
+        return FgtConfigParser.parse(config_stream, factory_fn)
 
 
-def load(filename: Path | str, encoding: str = 'ascii') -> FgtConfig:
+def load(
+    filename: Path | str,
+    encoding: str = 'ascii',
+    factory_fn: Optional[FgtConfigRootFactory] = None
+) -> FgtConfig:
     """ Load a FortiGate configuration from a file.
 
     :param filename: the configuration filename.
     :param encoding: default encoding.
+    :param factory_fn: optional factory function to override the default root factory
     :return: a ``FgtConfig`` object.
     :raise FgtConfigSyntaxError: if a syntax error is detected.
     """
     with open(str(filename), encoding=encoding) as config_stream:
-        return FgtConfigParser.parse(config_stream)
+        return FgtConfigParser.parse(config_stream, factory_fn)

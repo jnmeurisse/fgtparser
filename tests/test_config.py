@@ -11,8 +11,8 @@ from src.fgtparser import (
     FgtConfigTable,
     load,
     loads,
-    set_root_config_factory,
-    uqs, qus,
+    uqs,
+    qus,
 )
 from tests import make_test_path
 
@@ -65,9 +65,7 @@ class TestConfig(unittest.TestCase):
             def firewall_address6(self) -> FgtConfigTable:
                 return self.c_table('firewall address6')
 
-        set_root_config_factory(lambda _, cfg: RootConfig(cfg))
-
-        config = load(make_test_path("test3.conf"))
+        config = load(make_test_path("test3.conf"), factory_fn=lambda cfg: RootConfig(cfg))
         config_root = cast(RootConfig, config.root)
 
         config_global = config_root.system_global()
