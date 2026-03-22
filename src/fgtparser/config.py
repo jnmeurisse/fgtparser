@@ -80,7 +80,7 @@ def uqs(arg: str) -> str:
     if len(arg) < 2 or (arg[0] != '"' or arg[-1] != '"'):
         res = arg
     else:
-        res = arg[1:-1].replace('\\\\', '\\').replace('\\"', '"')
+        res = arg[1:-1].replace('\\"', '"').replace('\\\\', '\\')
     return res
 
 

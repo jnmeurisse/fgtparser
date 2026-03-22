@@ -12,7 +12,7 @@ from src.fgtparser import (
     load,
     loads,
     set_root_config_factory,
-    uqs,
+    uqs, qus,
 )
 from tests import make_test_path
 
@@ -231,3 +231,15 @@ class TestConfig(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             print(config_global.len)
+
+    def test_qs(self):
+        self.assertEqual(qus('hello'), '"hello"')
+        self.assertEqual(qus('say "hi"'), '"say \\"hi\\""')
+        self.assertEqual(qus('back\\slash'), '"back\\\\slash"')
+        self.assertEqual(qus('a\\"b'), '"a\\\\\\\"b"')
+
+    def test_uqs(self):
+        self.assertEqual('hello', uqs('"hello"'))
+        self.assertEqual('say "hi"', uqs('"say \\"hi\\""'))
+        self.assertEqual('back\\slash', uqs('"back\\\\slash"'))
+        self.assertEqual('a\\"b', uqs('"a\\\\\\\"b"'))
