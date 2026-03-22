@@ -74,7 +74,7 @@ The filter function must return a boolean.
 
 def uqs(arg: str) -> str:
     """
-    Unquotes a string by removing surrounding double quotes and unescaping
+    Unquotes a string by removing surrounding double quotes and un-escaping
     escaped quotes and backslashes.
     """
     if len(arg) < 2 or (arg[0] != '"' or arg[-1] != '"'):
@@ -101,12 +101,25 @@ class FgtConfigNode(ABC):
     """
 
     @abstractmethod
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield the direct children of this node as (key, node) pairs.
+
+        Leaf nodes (``FgtConfigSet``, ``FgtConfigUnset``) yield nothing.
+        Body nodes (``FgtConfigObject``, ``FgtConfigTable``) yield their
+        dictionary entries.
+
+        :yield: A tuple of (parameter name, child node) for each direct
+            child of this node.
+        """
+
     def traverse(
             self,
             key: str,
             fn: FgtConfigTraverseCallback,
             parents: FgtConfigStack,
-            data: Any
+            data: Any,
+            predicate: Optional[FgtConfigFilterCallback] = None
     ) -> None:
         """
         Recursively traverse a configuration object tree and invoke a callback
@@ -122,11 +135,26 @@ class FgtConfigNode(ABC):
         :param key: The configuration parameter name of this object in the
             dictionary.
         :param fn: A callback function to invoke on each node.
-        :param parents: A stack of parent nodes, where each entry is a tuple of
-            (str, FgtConfigNode).
+        :param parents: A stack of parent nodes, where each entry is a tuple
+            of (str, FgtConfigNode).
         :param data: Arbitrary user data to pass to the callback.
+        :param predicate: Optional filter callback.  When supplied, a node
+            whose predicate returns ``False`` is silently skipped along
+            with its entire subtree.  Defaults to ``None`` (visit every
+            node).
         :return: None
         """
+        if predicate is not None and not predicate((key, self), parents, data):
+            return
+
+        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
+        parents.append((key, self))
+
+        for child_key, child_node in self.children():
+            child_node.traverse(child_key, fn, parents, data)
+
+        parents.pop()
+        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
 
 
 T = TypeVar("T")
@@ -137,7 +165,6 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
     def __init__(self, data: Optional[dict[str, FgtConfigNode]] = None) -> None:
         self._data: dict[str, FgtConfigNode] = data or {}
 
-    # Required MutableMapping methods
     def __getitem__(self, key: str) -> FgtConfigNode:
         return self._data[key]
 
@@ -184,24 +211,19 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
 class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
     """ An abstract base class for a CONFIG table or a CONFIG object. """
 
-    def traverse(
-            self,
-            key: str,
-            fn: FgtConfigTraverseCallback,
-            parents: FgtConfigStack,
-            data: Any
-    ) -> None:
-        # … enter the config section
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
-        parents.append((key, self))
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield all entries in this node's dictionary as (key, node) pairs.
 
-        # ... traverse all items in this dictionary
-        for item_key, item_value in self.items():
-            item_value.traverse(item_key, fn, parents, data)
+        Both ``FgtConfigObject`` and ``FgtConfigTable`` store their
+        sub-commands in an inherited ``FgtConfigDict``, so this single
+        implementation covers both. Subclasses may override if they need
+        to filter or reorder children.
 
-        # … leave the config section
-        parents.pop()
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
+        :yield: A tuple of (parameter name, child node) for each entry,
+            in insertion order.
+        """
+        yield from self.items()
 
     def walk(self, key: str, delimiter: str = "/") -> Iterator[FgtConfigItem]:
         """
@@ -225,7 +247,7 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
             path, node = pending.popleft()
             if isinstance(node, (FgtConfigObject, FgtConfigTable)):
                 pending.extend(
-                    [(path + delimiter + k, v) for k, v in node.items()]
+                    [(path + delimiter + k, v) for k, v in node.children()]
                 )
                 yield path, node
             elif isinstance(node, (FgtConfigSet, FgtConfigUnset)):
@@ -511,30 +533,29 @@ class FgtConfigSet(FgtConfigNode):
     def __hash__(self) -> int:
         return hash(tuple(self._parameters))
 
-    def traverse(
-            self,
-            key: str,
-            fn: FgtConfigTraverseCallback,
-            parents: FgtConfigStack,
-            data: Any
-    ) -> None:
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield nothing — a SET command has no child nodes.
+
+        :yield: Nothing.
+        """
+        return iter([])
 
 
 @final
 class FgtConfigUnset(FgtConfigNode):
     """ Represents an UNSET command. """
 
-    def traverse(
-            self,
-            key: str,
-            fn: FgtConfigTraverseCallback,
-            parents: FgtConfigStack,
-            data: Any
-    ) -> None:
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
+    def __len__(self) -> int:
+        return 0
+
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield nothing — a SET command has no child nodes.
+
+        :yield: Nothing.
+        """
+        return iter([])
 
 
 class FgtConfigRoot(FgtConfigObject):
@@ -579,10 +600,29 @@ class FgtConfigRoot(FgtConfigObject):
             key: str,  # noqa: ARG002
             fn: FgtConfigTraverseCallback,
             parents: FgtConfigStack,
-            data: Any
+            data: Any,
+            predicate: Optional[FgtConfigFilterCallback] = None
     ) -> None:
+        """
+        Traverse all top-level sections without wrapping them in an
+        ENTER/EXIT callback pair for the root itself.
+
+        The root node is a container, not a configuration command — it has
+        no ``config`` / ``end`` representation in the file format, so
+        callers such as ``FgtConfig.dumps`` should not receive enter/exit
+        events for it. Only its children are traversed.
+
+        :param key: Ignored at the root level.
+        :param fn: Callback forwarded to each child's ``traverse`` call.
+        :param parents: Stack of ancestor nodes, passed through unchanged.
+        :param data: Arbitrary user data forwarded to ``fn``.
+        :param predicate: Optional filter callback.  When supplied, a node
+            whose predicate returns ``False`` is silently skipped along
+            with its entire subtree.  Defaults to ``None`` (visit every
+            node).
+        """
         for item_key, item_value in self.items():
-            item_value.traverse(item_key, fn, parents, data)
+            item_value.traverse(item_key, fn, parents, data, predicate)
 
 
 @final
@@ -680,8 +720,8 @@ class FgtConfig:
 
     def dumps(
             self,
-            item_filter: Optional[FgtConfigFilterCallback] = None,
-            data: Optional[Any] = None
+            data: Optional[Any] = None,
+            item_filter: Optional[FgtConfigFilterCallback] = None
     ) -> list[str]:
         """
         Generate the configuration as a list of strings.
@@ -690,11 +730,11 @@ class FgtConfig:
         tree and generating a string representation of each item. The list of
         strings can be joined to form the complete configuration.
 
+        :param data: Optional data that can be passed to the `item_filter`
+            callback function. Defaults to `None`.
         :param item_filter: An optional filtering callback. This function is
             called for each node in the configuration tree. If the callback
             returns `True`, the node is included. Defaults to `None`.
-        :param data: Optional data that can be passed to the `item_filter`
-            callback function. Defaults to `None`.
 
         :return: A list of strings representing the configuration.
         """
@@ -706,10 +746,6 @@ class FgtConfig:
                 output_list: list[str]
         ) -> None:
             """ Append a configuration item to the output list """
-
-            # check if we skip this item
-            if item_filter and not item_filter(item, parents, data):
-                return
 
             # extract key, value from the given item
             key = item[0]
@@ -751,7 +787,7 @@ class FgtConfig:
                 v.traverse('', append_config_item, deque(), output)
                 output.extend(('end', ''))
         else:
-            self.root.traverse('', append_config_item, FgtConfigStack(), output)
+            self.root.traverse('', append_config_item, FgtConfigStack(), output, item_filter)
         return output
 
     def __repr__(self) -> str:
@@ -776,5 +812,5 @@ class FgtConfig:
         if include_comments and len(self.comments) > 0:
             file.write("\n".join(self.comments))
             file.write("\n")
-        file.write("\n".join(self.dumps(item_filter, data)))
+        file.write("\n".join(self.dumps(data, item_filter)))
         file.write("\n")
