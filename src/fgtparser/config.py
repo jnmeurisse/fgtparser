@@ -101,6 +101,18 @@ class FgtConfigNode(ABC):
     """
 
     @abstractmethod
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield the direct children of this node as (key, node) pairs.
+
+        Leaf nodes (``FgtConfigSet``, ``FgtConfigUnset``) yield nothing.
+        Body nodes (``FgtConfigObject``, ``FgtConfigTable``) yield their
+        dictionary entries.
+
+        :yield: A tuple of (parameter name, child node) for each direct
+            child of this node.
+        """
+
     def traverse(
             self,
             key: str,
@@ -127,6 +139,14 @@ class FgtConfigNode(ABC):
         :param data: Arbitrary user data to pass to the callback.
         :return: None
         """
+        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
+        parents.append((key, self))
+
+        for child_key, child_node in self.children():
+            child_node.traverse(child_key, fn, parents, data)
+
+        parents.pop()
+        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
 
 
 T = TypeVar("T")
@@ -137,7 +157,6 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
     def __init__(self, data: Optional[dict[str, FgtConfigNode]] = None) -> None:
         self._data: dict[str, FgtConfigNode] = data or {}
 
-    # Required MutableMapping methods
     def __getitem__(self, key: str) -> FgtConfigNode:
         return self._data[key]
 
@@ -184,24 +203,19 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
 class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
     """ An abstract base class for a CONFIG table or a CONFIG object. """
 
-    def traverse(
-            self,
-            key: str,
-            fn: FgtConfigTraverseCallback,
-            parents: FgtConfigStack,
-            data: Any
-    ) -> None:
-        # … enter the config section
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
-        parents.append((key, self))
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield all entries in this node's dictionary as (key, node) pairs.
 
-        # ... traverse all items in this dictionary
-        for item_key, item_value in self.items():
-            item_value.traverse(item_key, fn, parents, data)
+        Both ``FgtConfigObject`` and ``FgtConfigTable`` store their
+        sub-commands in an inherited ``FgtConfigDict``, so this single
+        implementation covers both. Subclasses may override if they need
+        to filter or reorder children.
 
-        # … leave the config section
-        parents.pop()
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
+        :yield: A tuple of (parameter name, child node) for each entry,
+            in insertion order.
+        """
+        yield from self.items()
 
     def walk(self, key: str, delimiter: str = "/") -> Iterator[FgtConfigItem]:
         """
@@ -511,30 +525,29 @@ class FgtConfigSet(FgtConfigNode):
     def __hash__(self) -> int:
         return hash(tuple(self._parameters))
 
-    def traverse(
-            self,
-            key: str,
-            fn: FgtConfigTraverseCallback,
-            parents: FgtConfigStack,
-            data: Any
-    ) -> None:
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield nothing — a SET command has no child nodes.
+
+        :yield: Nothing.
+        """
+        return iter([])
 
 
 @final
 class FgtConfigUnset(FgtConfigNode):
     """ Represents an UNSET command. """
 
-    def traverse(
-            self,
-            key: str,
-            fn: FgtConfigTraverseCallback,
-            parents: FgtConfigStack,
-            data: Any
-    ) -> None:
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
+    def __len__(self) -> int:
+        return 0
+
+    def children(self) -> Iterator[FgtConfigItem]:
+        """
+        Yield nothing — a SET command has no child nodes.
+
+        :yield: Nothing.
+        """
+        return iter([])
 
 
 class FgtConfigRoot(FgtConfigObject):
@@ -581,6 +594,20 @@ class FgtConfigRoot(FgtConfigObject):
             parents: FgtConfigStack,
             data: Any
     ) -> None:
+        """
+        Traverse all top-level sections without wrapping them in an
+        ENTER/EXIT callback pair for the root itself.
+
+        The root node is a container, not a configuration command — it has
+        no ``config`` / ``end`` representation in the file format, so
+        callers such as ``FgtConfig.dumps`` should not receive enter/exit
+        events for it. Only its children are traversed.
+
+        :param key: Ignored at the root level.
+        :param fn: Callback forwarded to each child's ``traverse`` call.
+        :param parents: Stack of ancestor nodes, passed through unchanged.
+        :param data: Arbitrary user data forwarded to ``fn``.
+        """
         for item_key, item_value in self.items():
             item_value.traverse(item_key, fn, parents, data)
 
