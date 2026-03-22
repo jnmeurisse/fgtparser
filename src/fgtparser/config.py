@@ -626,33 +626,80 @@ class FgtConfigRoot(FgtConfigObject):
 
 
 @final
-class FgtConfigComments(FgtConfigTokens):
+class FgtConfigComments:
     _config_version_comment: Final[str] = '#config-version='
 
+    def __init__(self, tokens: Iterable[str] = ()) -> None:
+        self._tokens: list[str] = list(tokens)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._tokens)
+
+    def __len__(self) -> int:
+        return len(self._tokens)
+
+    def __bool__(self) -> bool:
+        return len(self._tokens) > 0
+
+    def __getitem__(self, idx: int) -> str:
+        return self._tokens[idx]
+
+    def append(self, comment: str) -> None:
+        self._tokens.append(comment)
+
     def _config_version(self) -> list[str]:
+        """
+        Extract and split the config-version string from the comment block.
+
+        Scans all comments for a line beginning with the config-version
+        prefix (``#config-version=``). When found, the remainder of the
+        line after the prefix is split on ``':'`` and returned as a list
+        of fields. If no such comment exists, the sentinel ``["?-?"]`` is
+        returned so that callers always receive a non-empty list with a
+        parseable first element.
+
+        The last matching comment wins when duplicates are present, which
+        mirrors FortiGate behaviour where a later header line overrides an
+        earlier one.
+
+        Expected format of the raw comment line::
+
+            #config-version=FGT60F-7.4.1-FW-build2571-230510:opmode=0:...
+
+        In this example the return value would be::
+
+            ['FGT60F-7.4.1-FW-build2571-230510', 'opmode=0', ...]
+
+        :return: A list of fields extracted from the config-version comment,
+            or ``['?-?']`` if no such comment is present.
+        """
         version = ["?-?"]
         for comment in self:
             if comment.startswith(self._config_version_comment):
                 version = comment[len(self._config_version_comment):].split(':')
         return version
 
+    def _parsed_version(self) -> tuple[str, str]:
+        """
+        Parse the config-version comment into a (model, version) pair.
+
+        Returns ``('?', '?')`` for either component that cannot be found.
+        Cached because the comment list is immutable after construction.
+        """
+        raw, sep, version = self._config_version()[0].partition('-')
+        if not sep:
+            return '?', '?'
+        return raw, version
+
     @property
     def version(self) -> str:
-        """ Return the FortiOS version. """
-        config_version = self._config_version()[0]
-        sep = config_version.find('-')
-        if sep == -1:
-            return '?'
-        return config_version[sep + 1:]
+        """Return the FortiOS version, or ``'?'`` if not present."""
+        return self._parsed_version[1]
 
     @property
     def model(self) -> str:
-        """ Return the firewall model. """
-        config_version = self._config_version()[0]
-        sep = config_version.find('-')
-        if sep == -1:
-            return '?'
-        return config_version[:sep]
+        """Return the firewall model, or ``'?'`` if not present."""
+        return self._parsed_version[0]
 
 
 @final
