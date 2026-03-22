@@ -74,7 +74,7 @@ The filter function must return a boolean.
 
 def uqs(arg: str) -> str:
     """
-    Unquotes a string by removing surrounding double quotes and unescaping
+    Unquotes a string by removing surrounding double quotes and un-escaping
     escaped quotes and backslashes.
     """
     if len(arg) < 2 or (arg[0] != '"' or arg[-1] != '"'):
@@ -118,7 +118,8 @@ class FgtConfigNode(ABC):
             key: str,
             fn: FgtConfigTraverseCallback,
             parents: FgtConfigStack,
-            data: Any
+            data: Any,
+            predicate: Optional[FgtConfigFilterCallback] = None
     ) -> None:
         """
         Recursively traverse a configuration object tree and invoke a callback
@@ -134,11 +135,18 @@ class FgtConfigNode(ABC):
         :param key: The configuration parameter name of this object in the
             dictionary.
         :param fn: A callback function to invoke on each node.
-        :param parents: A stack of parent nodes, where each entry is a tuple of
-            (str, FgtConfigNode).
+        :param parents: A stack of parent nodes, where each entry is a tuple
+            of (str, FgtConfigNode).
         :param data: Arbitrary user data to pass to the callback.
+        :param predicate: Optional filter callback.  When supplied, a node
+            whose predicate returns ``False`` is silently skipped along
+            with its entire subtree.  Defaults to ``None`` (visit every
+            node).
         :return: None
         """
+        if predicate is not None and not predicate((key, self), parents, data):
+            return
+
         fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
         parents.append((key, self))
 
@@ -592,7 +600,8 @@ class FgtConfigRoot(FgtConfigObject):
             key: str,  # noqa: ARG002
             fn: FgtConfigTraverseCallback,
             parents: FgtConfigStack,
-            data: Any
+            data: Any,
+            predicate: Optional[FgtConfigFilterCallback] = None
     ) -> None:
         """
         Traverse all top-level sections without wrapping them in an
@@ -607,9 +616,13 @@ class FgtConfigRoot(FgtConfigObject):
         :param fn: Callback forwarded to each child's ``traverse`` call.
         :param parents: Stack of ancestor nodes, passed through unchanged.
         :param data: Arbitrary user data forwarded to ``fn``.
+        :param predicate: Optional filter callback.  When supplied, a node
+            whose predicate returns ``False`` is silently skipped along
+            with its entire subtree.  Defaults to ``None`` (visit every
+            node).
         """
         for item_key, item_value in self.items():
-            item_value.traverse(item_key, fn, parents, data)
+            item_value.traverse(item_key, fn, parents, data, predicate)
 
 
 @final
@@ -707,8 +720,8 @@ class FgtConfig:
 
     def dumps(
             self,
-            item_filter: Optional[FgtConfigFilterCallback] = None,
-            data: Optional[Any] = None
+            data: Optional[Any] = None,
+            item_filter: Optional[FgtConfigFilterCallback] = None
     ) -> list[str]:
         """
         Generate the configuration as a list of strings.
@@ -717,11 +730,11 @@ class FgtConfig:
         tree and generating a string representation of each item. The list of
         strings can be joined to form the complete configuration.
 
+        :param data: Optional data that can be passed to the `item_filter`
+            callback function. Defaults to `None`.
         :param item_filter: An optional filtering callback. This function is
             called for each node in the configuration tree. If the callback
             returns `True`, the node is included. Defaults to `None`.
-        :param data: Optional data that can be passed to the `item_filter`
-            callback function. Defaults to `None`.
 
         :return: A list of strings representing the configuration.
         """
@@ -733,10 +746,6 @@ class FgtConfig:
                 output_list: list[str]
         ) -> None:
             """ Append a configuration item to the output list """
-
-            # check if we skip this item
-            if item_filter and not item_filter(item, parents, data):
-                return
 
             # extract key, value from the given item
             key = item[0]
@@ -778,7 +787,7 @@ class FgtConfig:
                 v.traverse('', append_config_item, deque(), output)
                 output.extend(('end', ''))
         else:
-            self.root.traverse('', append_config_item, FgtConfigStack(), output)
+            self.root.traverse('', append_config_item, FgtConfigStack(), output, item_filter)
         return output
 
     def __repr__(self) -> str:
@@ -803,5 +812,5 @@ class FgtConfig:
         if include_comments and len(self.comments) > 0:
             file.write("\n".join(self.comments))
             file.write("\n")
-        file.write("\n".join(self.dumps(item_filter, data)))
+        file.write("\n".join(self.dumps(data, item_filter)))
         file.write("\n")
