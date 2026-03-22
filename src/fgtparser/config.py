@@ -242,7 +242,7 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
         pending: deque[FgtConfigItem] = deque([(key, self)])
         while len(pending) > 0:
             path, node = pending.popleft()
-            if isinstance(node, (FgtConfigObject, FgtConfigTable)):
+            if isinstance(node, FgtConfigBody):
                 pending.extend(
                     [(path + delimiter + k, v) for k, v in node.children()]
                 )
