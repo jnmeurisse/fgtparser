@@ -28,7 +28,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterator
 from enum import Enum, auto
-from typing import Any, Final, Optional, TextIO, final, Iterable
+from typing import Any, Final, Optional, TextIO, final, Iterable, MutableMapping, TypeVar, Type
 
 FgtConfigToken = str
 """ A token in a config file. A token is a sequence of characters. """
@@ -129,14 +129,55 @@ class FgtConfigNode(ABC):
         """
 
 
-class FgtConfigDict(dict[str, FgtConfigNode]):
+T = TypeVar("T")
+
+
+class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
     """ A dictionary of configuration nodes. """
+    def __init__(self, data: Optional[dict[str, FgtConfigNode]] = None) -> None:
+        self._data: dict[str, FgtConfigNode] = data or {}
+
+    # Required MutableMapping methods
+    def __getitem__(self, key: str) -> FgtConfigNode:
+        return self._data[key]
+
+    def __setitem__(self, key: str, value: FgtConfigNode) -> None:
+        self._data[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._data[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def _get_as_type(
+            self,
+            key: str,
+            expected_type: Type[T],
+            default: Optional[T] = None
+    ) -> Optional[T]:
+        """
+        Retrieves a value and asserts its type.
+        """
+        if (value := self.get(key)) is None:
+            return default
+
+        if not isinstance(value, expected_type):
+            msg = f"Key '{key}' expected {expected_type.__name__}, but got {type(value).__name__}"
+            raise TypeError(msg)
+
+        return value
 
     def skeys(self) -> list[str]:
         """
         :return: A list of all dictionary keys, sorted case-insensitively.
         """
-        return sorted(self.keys(), key=lambda s: s.lower())
+        return sorted(self._data.keys(), key=lambda s: s.lower())
+
+    # Ensure .get() and other dict-like methods work via MutableMapping mixins
 
 
 class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
@@ -247,7 +288,7 @@ class FgtConfigObject(FgtConfigBody):
             self,
             key: str,
             default: Optional['FgtConfigTable'] = None
-    ) -> 'FgtConfigTable':
+    ) -> Optional['FgtConfigTable']:
         """
         Retrieve a configuration table by key, optionally returning a default.
 
@@ -263,12 +304,7 @@ class FgtConfigObject(FgtConfigBody):
         :raises TypeError: If the retrieved value is not of type
             ``FgtConfigTable``.
         """
-        value = self.get(key, default)
-        if value is not None and not isinstance(value, FgtConfigTable):
-            msg = f"'{key}' is not of type 'FgtConfigTable'"
-            raise TypeError(msg)
-
-        return value
+        return self._get_as_type(key, FgtConfigTable, default)
 
     def c_object(
             self,
@@ -290,12 +326,7 @@ class FgtConfigObject(FgtConfigBody):
         :raises TypeError: If the retrieved value is not of type
             ``FgtConfigObject``.
         """
-        value = self.get(key, default)
-        if value is not None and not isinstance(value, FgtConfigObject):
-            msg = f"'{key}' is not of type 'FgtConfigObject'"
-            raise TypeError(msg)
-
-        return value
+        return self._get_as_type(key, FgtConfigObject, default)
 
     def c_set(
             self,
@@ -317,17 +348,12 @@ class FgtConfigObject(FgtConfigBody):
         :raises TypeError: If the retrieved value is not of type
             ``FgtConfigSet``.
         """
-        value = self.get(key, default)
-        if value is not None and not isinstance(value, FgtConfigSet):
-            msg = f"'{key}' is not of type 'FgtConfigSet'"
-            raise TypeError(msg)
-
-        return value
+        return self._get_as_type(key, FgtConfigSet, default)
 
     def param(
             self,
             key: str,
-            default: str | None = None
+            default: Optional[str] = None
     ) -> Optional[str]:
         """
         Return the value of a simple SET command.
@@ -344,8 +370,7 @@ class FgtConfigObject(FgtConfigBody):
         :raises ValueError: If the SET command defines multiple values for the
             parameter.
         """
-        value = self.c_set(key)
-        if value is None:
+        if (value := self.c_set(key)) is None:
             return default
 
         if len(value) != 1:
@@ -402,9 +427,11 @@ class FgtConfigTable(FgtConfigBody):
                 returns the configuration object for ``2``.
         """
         if isinstance(item, int):
-            value = super().get(str(item))
+            value = self._data.get(str(item))
         elif isinstance(item, str):
-            value = super().get(qus(item))
+            value = self._data.get(item)
+            if value is None:
+                value = self._data.get(qus(item))
         else:
             msg = f"'{type(item)}' is not a valid type"
             raise TypeError(msg)
@@ -421,7 +448,7 @@ class FgtConfigTable(FgtConfigBody):
     def c_entry(
             self,
             key: str | int,
-            default: FgtConfigObject | None = None
+            default: Optional[FgtConfigObject] = None
     ) -> Optional[FgtConfigObject]:
         try:
             return self[key]
@@ -432,7 +459,6 @@ class FgtConfigTable(FgtConfigBody):
 @final
 class FgtConfigSet(FgtConfigNode):
     """ Represents a SET command. """
-
     def __init__(self, parameters: Iterable[str]) -> None:
         self._parameters = list(parameters)
 
@@ -477,9 +503,6 @@ class FgtConfigUnset(FgtConfigNode):
         fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, data)
         fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, data)
 
-    def __len__(self) -> int:
-        return 0
-
 
 class FgtConfigRoot(FgtConfigObject):
     """
@@ -491,7 +514,7 @@ class FgtConfigRoot(FgtConfigObject):
 
     def sections(
             self,
-            pattern: str | None = None
+            pattern: Optional[str] = None
     ) -> Iterator[tuple[str, FgtConfigTable | FgtConfigObject]]:
         """
         Returns all sections in the root configuration, optionally filtered by a
@@ -577,8 +600,7 @@ class FgtConfig:
         configuration. If VDOMs are not used, the `vdoms` dictionary should be
         empty.
 
-        :param comments: A list of comments found at the start of the
-            configuration file.
+        :param comments: A list of comments found at the start of the configuration file.
         :param root: A dictionary of configuration objects and tables.
         :param vdoms: A dictionary of root configurations for each VDOM. Should
             be empty if VDOMs are not used.
@@ -623,8 +645,8 @@ class FgtConfig:
 
     def dumps(
             self,
-            item_filter: FgtConfigFilterCallback | None = None,
-            data: Any | None = None
+            item_filter: Optional[FgtConfigFilterCallback] = None,
+            data: Optional[Any] = None
     ) -> list[str]:
         """
         Generate the configuration as a list of strings.
@@ -704,8 +726,8 @@ class FgtConfig:
             self,
             file: TextIO,
             include_comments: bool,
-            item_filter: FgtConfigFilterCallback | None = None,
-            data: Any | None = None
+            item_filter: Optional[FgtConfigFilterCallback] = None,
+            data: Optional[Any] = None
     ) -> None:
         """ Write the configuration to a file.
 
