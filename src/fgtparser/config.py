@@ -153,6 +153,9 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
     def __len__(self) -> int:
         return len(self._data)
 
+    def __hash__(self) -> int:
+        return hash(self._data)
+
     def _get_as_type(
             self,
             key: str,
@@ -504,6 +507,9 @@ class FgtConfigSet(FgtConfigNode):
         if isinstance(other, str):
             return len(self._parameters) == 1 and self._parameters[0] == other
         return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(tuple(self._parameters))
 
     def traverse(
             self,
