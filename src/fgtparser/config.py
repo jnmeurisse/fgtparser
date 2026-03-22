@@ -470,8 +470,37 @@ class FgtConfigSet(FgtConfigNode):
         return self._parameters[idx]
 
     def __eq__(self, other) -> bool:
+        """
+         Compare this ``FgtConfigSet`` for equality with another object.
+
+         Supports three comparison types:
+
+         * ``FgtConfigSet`` — two sets are equal if they contain the same
+           sequence of parameters in the same order.
+         * ``str`` — a set with exactly one parameter is equal to a string
+           if that parameter matches the string. A set with zero or more
+           than one parameter is never equal to any string.
+         * ``list`` — a set is equal to a list if its parameters match the
+           list element-for-element.
+
+         .. warning::
+             Operand order matters when comparing against ``str``.
+             Python evaluates ``"enable" == cfg_set`` by calling
+             ``str.__eq__`` first, which returns ``NotImplemented`` for
+             unknown types; the reflected path does not exist for ``__eq__``,
+             so Python falls back to identity comparison and the result is
+             always ``False``. Always place the ``FgtConfigSet`` on the left:
+             ``cfg_set == "enable"``.
+
+         :param other: The object to compare against.
+         :return: ``True`` if the objects are considered equal, ``False`` if
+             they are not, or ``NotImplemented`` if the comparison is not
+             supported for the given type.
+         """
         if isinstance(other, FgtConfigSet):
             return self._parameters == other._parameters
+        if isinstance(other, list):
+            return self._parameters == other
         if isinstance(other, str):
             return len(self._parameters) == 1 and self._parameters[0] == other
         return NotImplemented

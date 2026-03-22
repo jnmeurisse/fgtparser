@@ -84,8 +84,8 @@ class TestConfig(unittest.TestCase):
 
         config_interface = config_root.interface()
         self.assertEqual(
-            FgtConfigSet(["10.1.1.10", "255.255.255.0"]),
-            config_interface.c_entry('port1').ip
+            config_interface.c_entry('port1').ip,
+            ["10.1.1.10", "255.255.255.0"]
         )
         self.assertEqual(
             "ping",
