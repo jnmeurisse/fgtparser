@@ -247,7 +247,7 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
             path, node = pending.popleft()
             if isinstance(node, (FgtConfigObject, FgtConfigTable)):
                 pending.extend(
-                    [(path + delimiter + k, v) for k, v in node.items()]
+                    [(path + delimiter + k, v) for k, v in node.children()]
                 )
                 yield path, node
             elif isinstance(node, (FgtConfigSet, FgtConfigUnset)):
