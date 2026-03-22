@@ -560,7 +560,7 @@ class FgtConfigRoot(FgtConfigObject):
     configuration and traversing through its entire configuration tree.
     """
     def __init__(self, config: FgtConfigObject):
-        super().__init__(config._data)
+        super().__init__(dict(config._data))
 
     def sections(
             self,
