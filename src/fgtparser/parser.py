@@ -30,7 +30,7 @@ FgtConfigRootFactory = Callable[[FgtConfigObject], FgtConfigRoot]
 """ Callable used to instantiate a `FgConfigRoot`.  """
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class _StreamPosition:
     """ A position in a stream of characters """
     row: int
@@ -96,6 +96,8 @@ class FgtConfigParser:
         EOS: Final[_Char] = ''  # end of stream
         EOL: Final[_Char] = '\n'  # end of line
         QUOTE: Final[_Char] = '\"'
+
+        __slots__ = ['_stream', '_char', '_pos', '_token']
 
         def __init__(self, input_stream: TextIO) -> None:
             """ Initialize the lexer """
