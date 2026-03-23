@@ -70,7 +70,7 @@ class TestConfig(unittest.TestCase):
 
         config_global = config_root.system_global()
         self.assertEqual("12", config_global.param("timezone"))
-        self.assertEqual("12", config_global.timezone)
+        self.assertEqual("12", config_global.attr.timezone)
 
         config_address = config_root.firewall_address6()
         self.assertEqual(
@@ -79,17 +79,17 @@ class TestConfig(unittest.TestCase):
         )
         self.assertEqual(
             "::/128",
-            config_address.c_entry('none').ip6
+            config_address.c_entry('none').attr.ip6
         )
 
         config_interface = config_root.interface()
         self.assertEqual(
-            config_interface.c_entry('port1').ip,
+            config_interface.c_entry('port1').attr.ip,
             ["10.1.1.10", "255.255.255.0"]
         )
         self.assertEqual(
             "ping",
-            config_interface.c_entry('port5').allowaccess
+            config_interface.c_entry('port5').attr.allowaccess
         )
 
     def test_section(self) -> None:
@@ -142,8 +142,8 @@ class TestConfig(unittest.TestCase):
         """
         config = loads(config_string)
         config_test = config.root.c_object("test")
-        self.assertIsInstance(config_test.example, FgtConfigNode)
-        self.assertIsInstance(config_test.example, FgtConfigObject)
+        self.assertIsInstance(config_test.c_object('example'), FgtConfigNode)
+        self.assertIsInstance(config_test.c_object('example'), FgtConfigObject)
         self.assertEqual(len(config_test), 5)
         self.assertEqual(config_test.skeys(), ["alias", "allowaccess", "example", "ip", "vdom"])
 
@@ -151,10 +151,10 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config_test.get('vdom'), '"root"')
         self.assertEqual(config_test.get('vdom'), FgtConfigSet(['"root"']))
         self.assertEqual(config_test.param('vdom'), '"root"')
-        self.assertEqual(config_test.vdom, '"root"')
+        self.assertEqual(config_test.attr.vdom, '"root"')
 
         self.assertIsInstance(config_test.c_object('example'), FgtConfigObject)
-        self.assertEqual(len(config_test.example), 0)
+        self.assertEqual(len(config_test.c_object('example')), 0)
 
     def test_parse_int_table(self) -> None:
         config_string = """
@@ -189,7 +189,7 @@ class TestConfig(unittest.TestCase):
         config = load(make_test_path("test4.conf"), encoding='latin-1')
         config_root = config.root
         expected_comment = FgtConfigSet(['"Utilisateur avancé"'])
-        self.assertEqual(uqs(config_root.c_table("user local").c_entry('André').comment), expected_comment)
+        self.assertEqual(uqs(config_root.c_table("user local").c_entry('André').attr.comment), expected_comment)
 
     def test_default(self):
         config_string = """
@@ -216,19 +216,19 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config_port.c_set('allowaccess'), allowed_access)
         self.assertEqual(allowed_access, config_port.c_set('allowaccess'))
 
-        self.assertEqual(config_port.allowaccess, allowed_access)
-        self.assertEqual(allowed_access, config_port.allowaccess)
+        self.assertEqual(config_port.attr.allowaccess, allowed_access)
+        self.assertEqual(allowed_access, config_port.attr.allowaccess)
 
     def test_get_attr(self):
         config = load(make_test_path("test4.conf"), encoding='latin-1')
         config_global = config.root.c_object('system global')
-        self.assertEqual(config_global.alias, '"FGT-HQ"')
+        self.assertEqual(config_global.attr.alias, '"FGT-HQ"')
 
         with self.assertRaises(AttributeError):
-            print(config_global.xxx)
+            print(config_global.attr.xxx)
 
         with self.assertRaises(AttributeError):
-            print(config_global.len)
+            print(config_global.attr.len)
 
     def test_qs(self):
         self.assertEqual(qus('hello'), '"hello"')

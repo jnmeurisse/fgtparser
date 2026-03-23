@@ -6,7 +6,7 @@
 #
 
 """ fgtparser - A FortiGate configuration file parser """
-__version__ = '1.0'
+__version__ = '1.2'
 
 import io
 from pathlib import Path
@@ -24,6 +24,7 @@ from .config import FgtConfigTable as FgtConfigTable
 from .config import FgtConfigTraverseCallback as FgtConfigTraverseCallback
 from .config import FgtConfigUnset as FgtConfigUnset
 from .config import FgtNodeTransition as FgtNodeTransition
+from .config import FgtAttrView as FgtAttrView
 from .config import qus as qus
 from .config import uqs as uqs
 from .parser import FgtConfigEosError as FgtConfigEosError

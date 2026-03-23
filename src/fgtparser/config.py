@@ -92,6 +92,22 @@ def qus(arg: str) -> str:
     return '"{}"'.format(arg.replace('\\', '\\\\').replace('"', '\\"'))
 
 
+class FgtAttrView:
+    def __init__(self, obj: 'FgtConfigObject') -> None:
+        self._obj = obj
+
+    def __getattr__(self, key):
+        try:
+            value = self._obj[key]
+        except KeyError:
+            raise AttributeError(key) from None
+
+        # auto-wrap objects for chaining
+        if isinstance(value, FgtConfigObject):
+            return FgtAttrView(value)
+        return value
+
+
 class FgtConfigNode(ABC):
     """ Represents a configuration node in the configuration object tree.
 
@@ -280,11 +296,11 @@ class FgtConfigObject(FgtConfigBody):
 
         You can access the parameters as follows:
 
-        * `obj['vdom']` or `obj.vdom`
+        * `obj['vdom']` or `obj.attr.vdom`
             → returns `"root"`
-        * `obj['ip']` or `obj.ip`
+        * `obj['ip']` or `obj.attr.ip`
             → returns `['192.168.254.99', '255.255.255.0']`
-        * `obj['example']` or obj.example
+        * `obj['example']` or obj.attr.example
             → returns a `FgtConfigObject`
 
         The following methods provide type-checked access to specific node
@@ -294,15 +310,9 @@ class FgtConfigObject(FgtConfigBody):
         * `conf_obj.c_table('example')` → Returns a `FgtConfigTable`
         * `conf_obj.c_set('example')` → Returns a `FgtConfigSet`
     """
-
-    def __getattr__(self, key: str) -> FgtConfigNode:
-        """
-        Return the sub-command using object.param syntax.
-        """
-        if key not in self.keys():
-            return super().__getattribute__(key)
-
-        return self.get(key)
+    @property
+    def attr(self) -> FgtAttrView:
+        return FgtAttrView(self)
 
     def c_table(
             self,
