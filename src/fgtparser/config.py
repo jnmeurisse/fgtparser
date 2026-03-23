@@ -555,7 +555,7 @@ class FgtConfigUnset(FgtConfigNode):
 
     def children(self) -> Iterator[FgtConfigItem]:
         """
-        Yield nothing — a SET command has no child nodes.
+        Yield nothing — a UNSET command has no child nodes.
 
         :yield: Nothing.
         """
