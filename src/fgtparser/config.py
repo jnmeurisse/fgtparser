@@ -29,7 +29,7 @@ from collections import deque
 from collections.abc import Callable, Iterator
 from enum import Enum, auto
 from functools import cache
-from typing import Any, Final, Optional, TextIO, final, Iterable, MutableMapping, TypeVar, Type
+from typing import Any, Final, Optional, TextIO, final, Iterable, TypeVar, Type
 
 FgtConfigToken = str
 """ A token in a config file. A token is a sequence of characters. """
@@ -230,25 +230,23 @@ class FgtConfigNode(ABC):
 T = TypeVar("T")
 
 
-class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
-    """ A dictionary of configuration nodes. """
+class FgtConfigDict(dict[str, FgtConfigNode]):
+    """
+       A type-safe dictionary mapping string keys to ``FgtConfigNode`` instances.
+    """
     def __init__(self, data: Optional[dict[str, FgtConfigNode]] = None) -> None:
-        self._data: dict[str, FgtConfigNode] = data or {}
+        super().__init__()
+        if data:
+            self.update(data)   # routed through __setitem__
 
-    def __getitem__(self, key: str) -> FgtConfigNode:
-        return self._data[key]
-
-    def __setitem__(self, key: str, value: FgtConfigNode) -> None:
-        self._data[key] = value
-
-    def __delitem__(self, key: str) -> None:
-        del self._data[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._data)
-
-    def __len__(self) -> int:
-        return len(self._data)
+    def __setitem__(self, key: str, value: 'FgtConfigNode') -> None:
+        if not isinstance(key, str):
+            msg = f"Key must be 'str', got '{type(key).__name__}'"
+            raise TypeError(msg)
+        if not isinstance(value, FgtConfigNode):
+            msg = f"Value must be 'FgtConfigNode', got '{type(value).__name__}'"
+            raise TypeError(msg)
+        super().__setitem__(key, value)
 
     def _get_as_type(
             self,
@@ -257,26 +255,34 @@ class FgtConfigDict(MutableMapping[str, FgtConfigNode]):
             default: Optional[T] = None
     ) -> Optional[T]:
         """
-        Retrieves a value and asserts its type.
+        Retrieve a value by key and assert it is of the expected type.
+
+        :param key: The key to look up.
+        :param expected_type: The expected type of the value.
+        :param default: Fallback value if the key is absent. Defaults to ``None``.
+        :return: The value cast to ``expected_type``, or ``default`` if absent.
+        :raises TypeError: If the value exists but is not of ``expected_type``.
         """
         if (value := self.get(key)) is None:
             return default
-
         if not isinstance(value, expected_type):
-            msg = f"Key '{key}' expected {expected_type.__name__}, but got {type(value).__name__}"
+            msg = f"Key '{key}' expected '{expected_type.__name__}', got '{type(value).__name__}'"
             raise TypeError(msg)
-
         return value
 
     def skeys(self) -> list[str]:
         """
         :return: A list of all dictionary keys, sorted case-insensitively.
         """
-        return sorted(self._data.keys(), key=lambda s: s.lower())
+        return sorted(self.keys(), key=lambda s: s.lower())
 
 
 class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
     """ An abstract base class for a CONFIG table or a CONFIG object. """
+
+    def __init__(self, data: Optional[dict[str, FgtConfigNode]] = None) -> None:
+        FgtConfigNode.__init__(self)
+        FgtConfigDict.__init__(self, data)
 
     def children(self) -> Iterator[FgtConfigItem]:
         """
@@ -511,11 +517,11 @@ class FgtConfigTable(FgtConfigBody):
                 returns the configuration object for ``2``.
         """
         if isinstance(item, int):
-            value = self._data.get(str(item))
+            value = self.get(str(item))
         elif isinstance(item, str):
-            value = self._data.get(item)
+            value = self.get(item)
             if value is None:
-                value = self._data.get(qus(item))
+                value = self.get(qus(item))
         else:
             msg = f"'{type(item)}' is not a valid type"
             raise TypeError(msg)
@@ -624,7 +630,7 @@ class FgtConfigRoot(FgtConfigObject):
     configuration and traversing through its entire configuration tree.
     """
     def __init__(self, config: FgtConfigObject):
-        super().__init__(dict(config._data))
+        super().__init__(dict(config))
 
     def sections(
             self,
@@ -747,13 +753,11 @@ class FgtConfigComments:
                 version = comment[len(self._config_version_comment):].split(':')
         return version
 
-    @cache
     def _parsed_version(self) -> tuple[str, str]:
         """
         Parse the config-version comment into a (model, version) pair.
 
         Returns ``('?', '?')`` for either component that cannot be found.
-        Cached because the comment list is immutable after construction.
         """
         raw, sep, version = self._config_version()[0].partition('-')
         if not sep:
