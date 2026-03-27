@@ -134,6 +134,8 @@ class FgtAttrView:
         # auto-wrap objects for chaining
         if isinstance(value, FgtConfigObject):
             return FgtAttrView(value)
+        if isinstance(value, FgtConfigSet) and len(value) == 1:
+            return value[0]
         return value
 
 
@@ -154,7 +156,7 @@ class FgtConfigVisitor:
 
     The default implementations of both `visit_enter` and `visit_exit`
     are no-ops, so subclasses only need to override the methods relevant
-     to their use case.
+    to their use case.
     """
     def visit_enter(self, item: FgtConfigItem, parents: FgtConfigStack) -> bool:
         """Called before visiting children. Return False to prune subtree."""
@@ -559,6 +561,9 @@ class FgtConfigSet(FgtConfigNode):
 
     def __getitem__(self, idx: int) -> str:
         return self._parameters[idx]
+
+    def __setitem__(self, idx: int, value: str) -> None:
+        self._parameters[idx] = value
 
     def __eq__(self, other) -> bool:
         """

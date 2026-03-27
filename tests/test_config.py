@@ -188,7 +188,7 @@ class TestConfig(unittest.TestCase):
     def test_encoding(self):
         config = load(make_test_path("test4.conf"), encoding='latin-1')
         config_root = config.root
-        expected_comment = FgtConfigSet(['"Utilisateur avancé"'])
+        expected_comment = 'Utilisateur avancé'
         self.assertEqual(uqs(config_root.c_table("user local").c_entry('André').attr.comment), expected_comment)
 
     def test_default(self):
