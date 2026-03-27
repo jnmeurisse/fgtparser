@@ -28,7 +28,6 @@ from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterator
 from enum import Enum, auto
-from functools import cache
 from typing import Any, Final, Optional, TextIO, final, Iterable, TypeVar, Type
 
 FgtConfigToken = str
@@ -315,13 +314,13 @@ class FgtConfigBody(FgtConfigNode, FgtConfigDict, ABC):
         :yield: A tuple containing the full path and the corresponding config
             node.
         """
-        pending: deque[FgtConfigItem] = deque([(key, self)])
+        pending: deque[tuple[list[str], FgtConfigNode]] = deque([([key], self)])
         while len(pending) > 0:
-            path, node = pending.popleft()
+            parts, node = pending.popleft()
+            path = delimiter.join(parts)
             if isinstance(node, FgtConfigBody):
-                pending.extend(
-                    [(path + delimiter + k, v) for k, v in node.children()]
-                )
+                for child_key, child_node in node.children():
+                    pending.append((parts + [child_key], child_node))
                 yield path, node
             elif isinstance(node, (FgtConfigSet, FgtConfigUnset)):
                 yield path, node
