@@ -7,7 +7,6 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from pickle import GLOBAL
 from typing import Final, TextIO, final, Optional
 
 from .config import (
@@ -483,7 +482,7 @@ class FgtConfigParser:
         if len(vdoms_config) == 0:
             config_section = global_config
         else:
-            global_section = global_config.get(GLOBAL)
+            global_section = global_config.get(FgtConfigParser.GLOBAL)
             if global_section is None:
                 msg = "missing 'config global' section in vdom configuration"
                 raise FgtConfigSyntaxError(msg)

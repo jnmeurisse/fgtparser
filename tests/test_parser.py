@@ -1,14 +1,17 @@
 import unittest
 from collections import deque
 
-from fgtparser import (
+from src.fgtparser import (
     FgtConfig,
     FgtConfigObject,
     FgtConfigRoot,
     FgtConfigSet,
     FgtConfigSyntaxError,
     FgtConfigTable,
-    parse_string,
+    FgtConfigItem,
+    FgtConfigVisitor,
+    FgtConfigStack,
+    loads
 )
 
 
@@ -16,19 +19,19 @@ class TestParser(unittest.TestCase):
 
     def test_empty(self):
         config_text = ""
-        config = parse_string(config_text)
+        config = loads(config_text)
 
-        self.assertEqual(len(config.make_config()), 0)
+        self.assertEqual(len(config.dumps()), 0)
 
     def test_simple(self):
         config_text = "config test\nend"
-        config = parse_string(config_text)
+        config = loads(config_text)
 
         self.assertMultiLineEqual(str(config), config_text)
 
     def test_simple_types(self):
         config_text = "config test\nend"
-        config = parse_string(config_text)
+        config = loads(config_text)
 
         self.assertIsInstance(config, FgtConfig)
         self.assertIsInstance(config.root.get('test'), FgtConfigObject)
@@ -49,7 +52,7 @@ class TestParser(unittest.TestCase):
                     next
                 end
             """
-        config = parse_string(config_text)
+        config = loads(config_text)
 
         self.assertIsInstance(config, FgtConfig)
 
@@ -63,7 +66,7 @@ class TestParser(unittest.TestCase):
 
         entry_1 = conf_table.c_entry(1)
         self.assertIsInstance(entry_1, FgtConfigObject)
-        self.assertListEqual(entry_1.c_set('parameter1'), ['value1'])
+        self.assertEqual(entry_1.c_set('parameter1'), ['value1'])
         self.assertEqual(conf_table.c_entry(1).param('parameter1'), 'value1')
 
         entry_2 = conf_table.c_entry(2)
@@ -90,7 +93,7 @@ class TestParser(unittest.TestCase):
                     next
                 end
             """
-        config = parse_string(config_text)
+        config = loads(config_text)
 
         self.assertTrue(isinstance(config, FgtConfig))
 
@@ -106,7 +109,7 @@ class TestParser(unittest.TestCase):
 
         self.assertEqual(len(opt1), 3)
         self.assertIsInstance(opt1.get('parameter1'), FgtConfigSet)
-        self.assertListEqual(opt1.c_set('parameter1'), ['value1', '"value2"', 'value3'])
+        self.assertEqual(opt1.c_set('parameter1'), ['value1', '"value2"', 'value3'])
         self.assertEqual(opt1.c_table('subconfig1').c_entry(1).param('parameter2'), 'value2')
         self.assertEqual(opt1.c_table('subconfig2').c_entry('ABC').param('parameter3'), 'value3')
 
@@ -130,9 +133,9 @@ class TestParser(unittest.TestCase):
                     next
                 end
             """
-        config = parse_string(config_text)
+        config = loads(config_text)
         self.assertEqual(len(config.comments), 3)
-        self.assertListEqual(config.comments, ['# comment 1 "test"', '# comment 2', '# comment 3'])
+        self.assertEqual(config.comments, ['# comment 1 "test"', '# comment 2', '# comment 3'])
         conf_root = config.root.get('test')
         self.assertIsInstance(conf_root, FgtConfigTable)
 
@@ -144,13 +147,13 @@ class TestParser(unittest.TestCase):
                 config test
                 end
             """
-        config = parse_string(config_text)
+        config = loads(config_text)
         self.assertEqual(config.comments.version, '5.04-FW-build1111-161216')
         self.assertEqual(config.comments.model, 'FGT60E')
 
     def test_comments_3(self):
         config_text = ""
-        config = parse_string(config_text)
+        config = loads(config_text)
         self.assertEqual(config.comments.version, '?')
         self.assertEqual(config.comments.model, '?')
 
@@ -163,13 +166,13 @@ class TestParser(unittest.TestCase):
                     next
                 end
             """
-        config = parse_string(config_text)
+        config = loads(config_text)
         self.assertIsInstance(config.root.c_table('system interface'), FgtConfigTable)
 
     def test_loop(self):
         config_text = "config test\nend"
         for test_index in range(10):
-            self.assertEqual(str(parse_string(config_text)), config_text)
+            self.assertEqual(str(loads(config_text)), config_text)
 
     def test_vdom(self):
         """ test a vdom """
@@ -182,7 +185,7 @@ class TestParser(unittest.TestCase):
                 config global
                 end
             """
-        config = parse_string(config_text)
+        config = loads(config_text)
         self.assertTrue(config.multi_vdom)
         self.assertIsInstance(config.root, FgtConfigRoot)
         self.assertIsInstance(config.vdoms['root'], FgtConfigRoot)
@@ -232,13 +235,23 @@ class TestParser(unittest.TestCase):
                  "root/level1.3/level2.3.1/level3.3.1/param1",
                  "root/level1.3/level2.3.1/level3.3.1/param2"]
 
-        config = parse_string(config_text)
+        config = loads(config_text)
         nodes = []
         for node in config.root.walk("root"):
             nodes.append(node[0])
         self.assertListEqual(paths, nodes)
 
     def test_traverse(self):
+
+        class NodeRegister(FgtConfigVisitor):
+            def __init__(self, nodes: list[str]):
+                super().__init__()
+                self._nodes = nodes
+
+            def visit_enter(self, item: FgtConfigItem, parents: FgtConfigStack) -> bool:
+                self._nodes.append(item[0])
+                return True
+
         config_text = \
             """
                 config level1
@@ -274,10 +287,11 @@ class TestParser(unittest.TestCase):
             if enter:
                 nodes.append(node[0])
 
-        config = parse_string(config_text)
+        config = loads(config_text)
         root = config.root
         all_nodes = []
-        root.traverse("root", cb, deque(), all_nodes)
+        visitor = NodeRegister(all_nodes)
+        root.traverse("root", visitor, deque())
         self.assertListEqual(all_nodes, [
             "level1",
             "level1.1",
@@ -298,12 +312,12 @@ class TestParser(unittest.TestCase):
     def test_error_1(self):
         config_text = "config test end"
         with self.assertRaises(FgtConfigSyntaxError):
-            parse_string(config_text)
+            loads(config_text)
 
     def test_error_2(self):
         config_text = "abc"
         with self.assertRaises(FgtConfigSyntaxError):
-            parse_string(config_text)
+            loads(config_text)
 
     def test_error_3(self):
         config_text = \
@@ -315,7 +329,7 @@ class TestParser(unittest.TestCase):
                 end
             """
         with self.assertRaises(FgtConfigSyntaxError):
-            parse_string(config_text)
+            loads(config_text)
 
     def test_error_4(self):
         config_text = \
@@ -328,7 +342,7 @@ class TestParser(unittest.TestCase):
                 end
             """
         with self.assertRaises(FgtConfigSyntaxError):
-            parse_string(config_text)
+            loads(config_text)
 
     def test_error_5(self):
         config_text = \
@@ -341,10 +355,10 @@ class TestParser(unittest.TestCase):
                     end
                 end
             """
-        config_root = parse_string(config_text).root
+        config_root = loads(config_text).root
         self.assertTrue(config_root.c_object('test').param('param1') == 'value1')
-        self.assertTrue(config_root.c_object('test').param2 == 'value2')
-        self.assertTrue(config_root.c_object('test').param3 == 'value3')
+        self.assertTrue(config_root.c_object('test').attr.param2 == 'value2')
+        self.assertTrue(config_root.c_object('test').attr.param3 == 'value3')
         with self.assertRaises(TypeError):
             config_root.c_object('test').param('param4')
         self.assertTrue(config_root.c_object('test').param('param5', 'value_undef') == 'value_undef')

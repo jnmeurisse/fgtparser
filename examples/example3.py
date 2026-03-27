@@ -1,16 +1,19 @@
 # convert a fortigate configuration file to json format.
 from json import dumps
 
-from src.fgtparser import FgtConfig, FgtConfigTable, FgtConfigUnset, load, uqs
+from src.fgtparser import FgtConfig, FgtConfigTable, FgtConfigUnset, load, uqs, FgtConfigComments, \
+    FgtConfigObject, FgtConfigSet
 
 
 def encode_fgt_object(obj):
     if isinstance(obj, FgtConfigUnset):
         return {}
+    if isinstance(obj, (FgtConfigSet, FgtConfigComments)):
+        return list(obj)
+    if isinstance(obj, (FgtConfigObject, FgtConfigTable)):
+        return {uqs(k): v for k, v in obj.items()}
     if isinstance(obj, FgtConfig):
         return {"comments": obj.comments, "root": obj.root, "vdoms": obj.vdoms}
-    if isinstance(obj, FgtConfigTable):
-        return {uqs(entry[0]): entry[1] for entry in obj}
     raise TypeError(f'Cannot serialize object of {type(obj)}')
 
 

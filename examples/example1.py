@@ -1,13 +1,13 @@
 # print the admin timeout configuration
-from fgtparser import parse_file
+from fgtparser import load
 
 
 def main() -> None:
-    config = parse_file("example.conf")
+    config = load("example.conf")
     root = config.root
 
     global_section = root.c_object('system global')
-    print(global_section.admintimeout)
+    print(global_section.attr.admintimeout)
 
 
 if __name__ == '__main__':
