@@ -1,4 +1,4 @@
-<h1 align="center">A FortiGate configuration file parser</h1>
+<h1>A FortiGate configuration file parser</h1>
 
 # Description
 This package provides a non-validating FortiGate configuration file parser. 
@@ -90,34 +90,27 @@ FgtConfigNode (abstract)
 
 - print the admin timeout
   ```
-  from fgtparser import parse_file
-  
-  config = parse_file("example.conf")
+  from fgtparser import load
+
+  config = load("example.conf")
   root = config.root
-  
+
   global_section = root.c_object('system global')
-  print(global_section.admintimeout)
+  print(global_section.attr.admintimeout)
   ```
 
 - remove password from a configuration
   ```
-  import sys
-  from typing import Any, cast
-  
-  from fgtparser import parse_file
-  from fgtparser import FgtConfigItem, FgtConfigStack, FgtConfigSet
-   
-  def hide_password(enter: bool, item: FgtConfigItem, stack: FgtConfigStack, data: Any) -> None:
-      if enter:
-          key = item[0]
-          value = item[1]
-          if key == 'password' and isinstance(value, FgtConfigSet) and value[0] == 'ENC':
-              value[1] = '*'
-
-   
-  config = parse_file("example.conf")
-  config.root.traverse('', hide_password, FgtConfigStack(), None)
-  config.write(sys.stdout, True, None, None)
+  import sys 
+  from fgtparser import load
+  from fgtparser import FgtConfigSet
+     
+  config = load("example.conf")
+  for key, value in config.root.walk(''):
+    if key.endswith('/password') and isinstance(value, FgtConfigSet) and len(value) == 2 and value[0] == 'ENC':
+      # Replace encrypted password
+      value[1] = '?'
+  config.dump(sys.stdout, True, None, None)
   ```
 
 ___
@@ -125,5 +118,5 @@ ___
 Download wheel file from github and install it using pip (note: this package requires Python version >= 3.11) 
 
 ```
-pip3 install fgtparser-1.1-py3-none-any.whl
+pip3 install fgtparser-1.2-py3-none-any.whl
 ```
