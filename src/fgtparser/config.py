@@ -28,6 +28,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Iterator
 from enum import Enum, auto
+from functools import cache
 from typing import Any, Final, Optional, TextIO, final, Iterable, MutableMapping, TypeVar, Type
 
 FgtConfigToken = str
@@ -93,6 +94,35 @@ def qus(arg: str) -> str:
 
 
 class FgtAttrView:
+    """
+    A proxy view that enables attribute-style access to a ``FgtConfigObject``.
+
+    This class wraps a ``FgtConfigObject`` and allows its parameters to be
+    accessed as Python attributes rather than via dictionary-style lookups.
+    Nested ``FgtConfigObject`` values are automatically wrapped in a new
+    ``FgtAttrView``, enabling fluent chained access.
+
+    Typically obtained via the ``FgtConfigObject.attr`` property rather than
+    instantiated directly.
+
+    Example:
+        Given the configuration::
+
+            set vdom "root"
+            set ip 192.168.254.99 255.255.255.0
+            config example
+                set status enable
+            end
+
+        You can access parameters as follows::
+
+            obj.attr.vdom           # returns '"root"'
+            obj.attr.ip             # returns ['192.168.254.99', '255.255.255.0']
+            obj.attr.example.status # returns 'enable'  (chained access)
+
+    :raises AttributeError: If the requested attribute does not exist as a key
+        in the underlying ``FgtConfigObject``.
+    """
     def __init__(self, obj: 'FgtConfigObject') -> None:
         self._obj = obj
 
@@ -106,6 +136,34 @@ class FgtAttrView:
         if isinstance(value, FgtConfigObject):
             return FgtAttrView(value)
         return value
+
+
+class FgtConfigVisitor:
+    """
+    Base class for implementing visitors that traverse a configuration tree.
+
+    Subclass ``FgtConfigVisitor`` and override ``visit_enter`` and/or
+    ``visit_exit`` to process nodes during a traversal initiated by
+    ``FgtConfigNode.traverse``.
+
+    For each node visited, ``visit_enter`` is called before descending
+    into its children, and ``visit_exit`` is called after all children
+    have been visited. If ``visit_enter`` returns ``False``, the entire
+    subtree rooted at that node is skipped and ``visit_exit`` is **not**
+    called for that node.
+
+
+    The default implementations of both `visit_enter` and `visit_exit`
+    are no-ops, so subclasses only need to override the methods relevant
+     to their use case.
+    """
+    def visit_enter(self, item: FgtConfigItem, parents: FgtConfigStack) -> bool:
+        """Called before visiting children. Return False to prune subtree."""
+        return True
+
+    def visit_exit(self, item: FgtConfigItem, parents: FgtConfigStack) -> None:
+        """Called after visiting children. Not called if visit_enter returned False."""
+        return
 
 
 class FgtConfigNode(ABC):
@@ -132,46 +190,41 @@ class FgtConfigNode(ABC):
     def traverse(
             self,
             key: str,  # noqa: ARG002
-            fn: FgtConfigTraverseCallback,
-            traverse_data: Any,
-            parents: FgtConfigStack,
-            predicate: Optional[FgtConfigFilterCallback] = None,
-            predicate_data: Optional[Any] = None
+            visitor: FgtConfigVisitor,
+            parents: FgtConfigStack
     ) -> None:
         """
-        Recursively traverse a configuration object tree and invoke a callback
-        on each node.
+        Recursively traverse the configuration subtree rooted at this node,
+        invoking ``visitor`` on each node encountered.
 
-        This method enables traversal of a configuration object tree generated
-        by ``FgtParser.parse``. The provided callback function ``fn`` is called
-        both before and after visiting each CONFIG node.
+        For each node, ``visitor.visit_enter`` is called before
+        descending into its children, and ``visitor.visit_exit``
+        is called after. If ``visitor.visit_enter`` returns
+        ``False``, the entire subtree rooted at that node is pruned and
+        ``visitor.visit_exit`` is not called for it.
 
-        It is the caller's responsibility to ensure that the ``key`` parameter
-        matches the name used to map this object in its containing dictionary.
-
-        :param key: Ignored at the root level.
-        :param fn: Callback forwarded to each child's ``traverse`` call.
-        :param parents: Stack of ancestor nodes, passed through unchanged.
-        :param traverse_data: Arbitrary user data forwarded to ``fn``.
-        :param predicate_data: Arbitrary user data forwarded to ``predicate``.
-        :param predicate: Optional filter callback.  When supplied, a node
-            whose predicate returns ``False`` is silently skipped along
-            with its entire subtree.  Defaults to ``None`` (visit every
-            node).
-        :param predicate_data: Arbitrary user data forwarded to ``predicate``.
-        :return: None
+        :param key: The key under which this node is stored in its parent
+            dictionary. Passed as part of the ``FgtConfigItem`` tuple to
+            the visitor callbacks.
+        :param visitor: The visitor whose ``visitor.visit_enter``
+            and ``visitor.visit_exit`` methods are invoked at
+            each node.
+        :param parents: A stack of ``(key, node)`` pairs representing the
+            ancestors of the current node, from the traversal root down to the
+            immediate parent. The caller is responsible for passing an empty
+            ``FgtConfigStack`` at the top level.
         """
-        if predicate is not None and not predicate((key, self), parents, predicate_data):
-            return
+        item = (key, self)
+        if not visitor.visit_enter(item, parents):
+            return  # subtree pruned, visit_exit not called
 
-        fn(FgtNodeTransition.ENTER_NODE, (key, self), parents, traverse_data)
         parents.append((key, self))
 
         for child_key, child_node in self.children():
-            child_node.traverse(child_key, fn, traverse_data, parents, predicate, predicate_data)
+            child_node.traverse(child_key, visitor, parents)
 
         parents.pop()
-        fn(FgtNodeTransition.EXIT_NODE, (key, self), parents, traverse_data)
+        visitor.visit_exit(item, parents)
 
 
 T = TypeVar("T")
@@ -603,34 +656,30 @@ class FgtConfigRoot(FgtConfigObject):
     def traverse(
             self,
             key: str,  # noqa: ARG002
-            fn: FgtConfigTraverseCallback,
-            traverse_data: Any,
-            parents: FgtConfigStack,
-            predicate: Optional[FgtConfigFilterCallback] = None,
-            predicate_data: Optional[Any] = None
+            visitor: FgtConfigVisitor,
+            parents: FgtConfigStack
     ) -> None:
         """
-        Traverse all top-level sections without wrapping them in an
-        ENTER/EXIT callback pair for the root itself.
+        Traverse all top-level sections of the root configuration, forwarding
+        each to ``FgtConfigNode.traverse``.
 
-        The root node is a container, not a configuration command — it has
-        no ``config`` / ``end`` representation in the file format, so
-        callers such as ``FgtConfig.dumps`` should not receive enter/exit
-        events for it. Only its children are traversed.
+        Unlike the base implementation, this override does **not** invoke
+        ``visitor.visit_enter`` or ``visitor.visit_exit`` for the root node itself.
+        The root is a structural container with no representation in the
+        FortiGate file format — it has no ``config``/``end`` envelope — so
+        emitting enter/exit events for it would produce spurious output in
+        callers such as ```FgtConfig.dumps```.
 
-        :param key: Ignored at the root level.
-        :param fn: Callback forwarded to each child's ``traverse`` call.
-        :param parents: Stack of ancestor nodes, passed through unchanged.
-        :param traverse_data: Arbitrary user data forwarded to ``fn``.
-        :param predicate_data: Arbitrary user data forwarded to ``predicate``.
-        :param predicate: Optional filter callback.  When supplied, a node
-            whose predicate returns ``False`` is silently skipped along
-            with its entire subtree.  Defaults to ``None`` (visit every
-            node).
-        :param predicate_data: Arbitrary user data forwarded to ``predicate``.
+        :param key: Ignored. Present only to satisfy the
+            ``FgtConfigNode.traverse`` interface.
+        :param visitor: The visitor forwarded unchanged to each top-level
+            child's ``FgtConfigNode.traverse`` call.
+        :param parents: The ancestor stack forwarded unchanged to each
+            top-level child. Callers should pass an empty
+            ``FgtConfigStack`` at the top level.
         """
         for item_key, item_value in self.items():
-            item_value.traverse(item_key, fn, traverse_data, parents, predicate, predicate_data)
+            item_value.traverse(item_key, visitor, parents)
 
 
 @final
@@ -646,11 +695,22 @@ class FgtConfigComments:
     def __len__(self) -> int:
         return len(self._tokens)
 
-    def __bool__(self) -> bool:
-        return len(self._tokens) > 0
-
     def __getitem__(self, idx: int) -> str:
         return self._tokens[idx]
+
+    def __eq__(self, other) -> bool:
+        """
+        Compare this ``FgtConfigComments`` for equality with another object.
+        Warning::
+            Operand order matters when comparing against ``list``.
+            Always place the ``FgtConfigComments`` on the left:
+            ``comments == [...]``.
+        """
+        if isinstance(other, FgtConfigComments):
+            return self._tokens == other._tokens
+        if isinstance(other, list):
+            return self._tokens == other
+        return NotImplemented
 
     def append(self, comment: str) -> None:
         self._tokens.append(comment)
@@ -687,6 +747,7 @@ class FgtConfigComments:
                 version = comment[len(self._config_version_comment):].split(':')
         return version
 
+    @cache
     def _parsed_version(self) -> tuple[str, str]:
         """
         Parse the config-version comment into a (model, version) pair.
@@ -708,6 +769,53 @@ class FgtConfigComments:
     def model(self) -> str:
         """Return the firewall model, or ``'?'`` if not present."""
         return self._parsed_version()[0]
+
+
+class _VisitorWriter(FgtConfigVisitor):
+    def __init__(
+            self,
+            indent: int,
+            item_filter: Optional[FgtConfigFilterCallback] = None,
+            data: Optional[Any] = None
+    ) -> None:
+        self._indent = indent
+        self._item_filter = item_filter
+        self._data = data
+        self.output: list[str] = []
+
+    def _spaces(self, parents: FgtConfigStack) -> str:
+        return ' ' * (len(parents) * self._indent)
+
+    @staticmethod
+    def _is_under_object(parents: FgtConfigStack) -> bool:
+        return len(parents) == 0 or isinstance(parents[-1][1], FgtConfigObject)
+
+    def visit_enter(self, item: FgtConfigItem, parents: FgtConfigStack) -> bool:
+        if self._item_filter is not None and not self._item_filter(item, parents, self._data):
+            return False                # prune subtree, visit_exit won't be called
+
+        key, value = item
+        spaces = self._spaces(parents)
+
+        if isinstance(value, FgtConfigSet):
+            self.output.append(f"{spaces}set {key} {' '.join(value)}")
+        elif isinstance(value, FgtConfigUnset):
+            self.output.append(f"{spaces}unset {key}")
+        elif isinstance(value, (FgtConfigTable, FgtConfigObject)):
+            tag = "config" if self._is_under_object(parents) else "edit"
+            self.output.append(f"{spaces}{tag} {key}")
+        else:
+            raise TypeError(f"Unexpected node type: {type(value).__name__}")
+
+        return True
+
+    def visit_exit(self, item: FgtConfigItem, parents: FgtConfigStack) -> None:
+        key, value = item
+        spaces = self._spaces(parents)
+
+        if isinstance(value, (FgtConfigTable, FgtConfigObject)):
+            tag = "end" if self._is_under_object(parents) else "next"
+            self.output.append(f"{spaces}{tag}")
 
 
 @final
@@ -778,72 +886,23 @@ class FgtConfig:
             item_filter: Optional[FgtConfigFilterCallback] = None,
             data: Optional[Any] = None
     ) -> list[str]:
-        """
-        Generate the configuration as a list of strings.
+        visitor = _VisitorWriter(self._indent, item_filter, data)
 
-        This method creates the configuration by traversing the configuration
-        tree and generating a string representation of each item. The list of
-        strings can be joined to form the complete configuration.
-
-        :param item_filter: An optional filtering callback. This function is
-            called for each node in the configuration tree. If the callback
-            returns `True`, the node is included. Defaults to `None`.
-        :param data: Optional data that can be passed to the `item_filter`
-            callback function. Defaults to `None`.
-
-        :return: A list of strings representing the configuration.
-        """
-
-        def append_config_item(
-                transition: FgtNodeTransition,
-                item: FgtConfigItem,
-                parents: FgtConfigStack,
-                output_list: list[str]
-        ) -> None:
-            """ Append a configuration item to the output list """
-
-            # extract key, value from the given item
-            key = item[0]
-            value = item[1]
-
-            # create indentation spaces to prefix the line
-            spaces: str = ' ' * (len(parents) * self._indent)
-
-            if isinstance(value, FgtConfigSet):
-                if transition == FgtNodeTransition.ENTER_NODE:
-                    line = f"set {key} {' '.join(value)}"
-                    output_list.append(spaces + line)
-            elif isinstance(value, FgtConfigUnset):
-                if transition == FgtNodeTransition.ENTER_NODE:
-                    line = f"unset {key}"
-                    output_list.append(spaces + line)
-            elif isinstance(value, (FgtConfigTable, FgtConfigObject)):
-                if len(parents) == 0 or isinstance(parents[-1][1], FgtConfigObject):
-                    line = f"config {key}" if transition == FgtNodeTransition.ENTER_NODE else "end"
-                    output_list.append(spaces + line)
-                elif isinstance(parents[-1][1], FgtConfigTable):
-                    line = f"edit {key}" if transition == FgtNodeTransition.ENTER_NODE else "next"
-                    output_list.append(spaces + line)
-                else:
-                    raise ValueError
-            else:
-                raise TypeError
-
-        output: list[str] = []
         if self.multi_vdom:
-            output.extend(('', 'config vdom'))
+            visitor.output.extend(('', 'config vdom'))
             for k in self.vdoms:
-                output.extend(('edit ' + k, 'next'))
-            output.extend(('end', '', 'config global'))
-            self.root.traverse('', append_config_item, output, FgtConfigStack(), item_filter, data)
-            output.extend(('end', ''))
+                visitor.output.extend(('edit ' + k, 'next'))
+            visitor.output.extend(('end', '', 'config global'))
+            self.root.traverse('', visitor, FgtConfigStack())
+            visitor.output.extend(('end', ''))
             for k, v in self.vdoms.items():
-                output.extend(('config vdom', 'edit ' + k))
-                v.traverse('', append_config_item, output, deque(), item_filter, data)
-                output.extend(('end', ''))
+                visitor.output.extend(('config vdom', 'edit ' + k))
+                v.traverse('', visitor, FgtConfigStack())
+                visitor.output.extend(('end', ''))
         else:
-            self.root.traverse('', append_config_item, output, FgtConfigStack(), item_filter, data)
-        return output
+            self.root.traverse('', visitor, FgtConfigStack())
+
+        return visitor.output
 
     def __repr__(self) -> str:
         return "\n".join(self.dumps())

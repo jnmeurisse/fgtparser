@@ -25,6 +25,7 @@ from .config import FgtConfigTraverseCallback as FgtConfigTraverseCallback
 from .config import FgtConfigUnset as FgtConfigUnset
 from .config import FgtNodeTransition as FgtNodeTransition
 from .config import FgtAttrView as FgtAttrView
+from .config import FgtConfigVisitor as FgtConfigVisitor
 from .config import qus as qus
 from .config import uqs as uqs
 from .parser import FgtConfigEosError as FgtConfigEosError
