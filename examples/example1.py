@@ -1,5 +1,5 @@
 # print the admin timeout configuration
-from fgtparser import load
+from src.fgtparser import load
 
 
 def main() -> None:
