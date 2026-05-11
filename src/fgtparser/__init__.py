@@ -6,7 +6,7 @@
 #
 
 """ fgtparser - A FortiGate configuration file parser """
-__version__ = '1.2'
+__version__ = '1.3'
 
 import io
 from pathlib import Path
