@@ -379,7 +379,7 @@ class FgtConfigObject(FgtConfigBody):
             self,
             key: str,
             default: Optional['FgtConfigTable'] = None
-    ) -> Optional['FgtConfigTable']:
+    ) -> 'FgtConfigTable':
         """
         Retrieve a configuration table by key, optionally returning a default.
 
@@ -392,16 +392,19 @@ class FgtConfigObject(FgtConfigBody):
         :param default: A fallback value to return if the key is not found.
             Defaults to ``None``.
         :return: The configuration table associated with the key.
-        :raises TypeError: If the retrieved value is not of type
-            ``FgtConfigTable``.
+        :raises TypeError: If the retrieved value is not of type ``FgtConfigTable``.
+        :raises KeyError: If the key is not found and default is None.
         """
-        return self._get_as_type(key, FgtConfigTable, default)
+        if (table_config := self._get_as_type(key, FgtConfigTable, default)) is None:
+            msg = f"'{key}' not found"
+            raise KeyError(msg)
+        return table_config
 
     def c_object(
             self,
             key: str,
             default: Optional['FgtConfigObject'] = None
-    ) -> Optional['FgtConfigObject']:
+    ) -> 'FgtConfigObject':
         """
         Retrieve a configuration object by key, optionally returning a default.
 
@@ -414,16 +417,19 @@ class FgtConfigObject(FgtConfigBody):
         :param default: A fallback value to return if the key is not found.
             Defaults to ``None``.
         :return: The configuration object associated with the key.
-        :raises TypeError: If the retrieved value is not of type
-            ``FgtConfigObject``.
+        :raises TypeError: If the retrieved value is not of type ``FgtConfigObject``.
+        :raises KeyError: If the key is not found and default is None.
         """
-        return self._get_as_type(key, FgtConfigObject, default)
+        if (object_config := self._get_as_type(key, FgtConfigObject, default)) is None:
+            msg = f"'{key}' not found"
+            raise KeyError(msg)
+        return object_config
 
     def c_set(
             self,
             key: str,
             default: Optional['FgtConfigSet'] = None
-    ) -> Optional['FgtConfigSet']:
+    ) -> 'FgtConfigSet':
         """
         Retrieve a configuration set by key, optionally returning a default.
 
@@ -436,16 +442,19 @@ class FgtConfigObject(FgtConfigBody):
         :param default: A fallback value to return if the key is not found.
             Defaults to ``None``.
         :return: The configuration set associated with the key.
-        :raises TypeError: If the retrieved value is not of type
-            ``FgtConfigSet``.
+        :raises TypeError: If the retrieved value is not of type ``FgtConfigSet``.
+        :raises KeyError: If the key is not found and default is None.
         """
-        return self._get_as_type(key, FgtConfigSet, default)
+        if (set_config := self._get_as_type(key, FgtConfigSet, default)) is None:
+            msg = f"'{key}' not found"
+            raise KeyError(msg)
+        return set_config
 
     def param(
             self,
             key: str,
             default: Optional[str] = None
-    ) -> Optional[str]:
+    ) -> str:
         """
         Return the value of a simple SET command.
 
@@ -461,7 +470,9 @@ class FgtConfigObject(FgtConfigBody):
         :raises ValueError: If the SET command defines multiple values for the
             parameter.
         """
-        if (value := self.c_set(key)) is None:
+        if (value := self._get_as_type(key, FgtConfigSet, None)) is None:
+            if default is None:
+                raise KeyError(key)
             return default
 
         if len(value) != 1:
@@ -540,11 +551,17 @@ class FgtConfigTable(FgtConfigBody):
             self,
             key: str | int,
             default: Optional[FgtConfigObject] = None
-    ) -> Optional[FgtConfigObject]:
+    ) -> FgtConfigObject:
         try:
-            return self[key]
-        except KeyError:
-            return default
+            object_config = self[key]
+        except KeyError as e:
+            if default:
+                object_config = default
+            else:
+                msg = f"'{key}' not found"
+                raise KeyError(msg)
+
+        return object_config
 
 
 @final
@@ -579,7 +596,7 @@ class FgtConfigSet(FgtConfigNode):
          * ``list`` — a set is equal to a list if its parameters match the
            list element-for-element.
 
-         .. warning::
+         Warning::
              Operand order matters when comparing against ``str``.
              Python evaluates ``"enable" == cfg_set`` by calling
              ``str.__eq__`` first, which returns ``NotImplemented`` for

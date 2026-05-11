@@ -198,8 +198,26 @@ class TestConfig(unittest.TestCase):
         """
         config = loads(config_string)
         config_test = config.root.c_object("test")
-        self.assertEqual(config_test.param('item1'), None)
+        with self.assertRaises(KeyError):
+            config_test.param('item1')
         self.assertEqual(config_test.param('item1', 'default'), 'default')
+
+        with self.assertRaises(KeyError):
+            config.root.c_object("test2")
+        config_test = config.root.c_object("test2", FgtConfigObject())
+        self.assertIsNotNone(config_test)
+
+        with self.assertRaises(KeyError):
+            config.root.c_table("table")
+        config_test = config.root.c_table("table", FgtConfigTable())
+        self.assertIsNotNone(config_test)
+
+        with self.assertRaises(KeyError):
+            config.root.c_set("param")
+        config_test = config.root.c_set("param", FgtConfigSet([]))
+        self.assertIsNotNone(config_test)
+
+        self.assertTrue('test' in config.root)
 
     def test_comparison(self):
         config = load(make_test_path("test4.conf"), encoding='latin-1')
